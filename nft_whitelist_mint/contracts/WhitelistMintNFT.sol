@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "hardhat/console.sol";
@@ -11,7 +12,7 @@ import "hardhat/console.sol";
 /// @title Whitelist Mint ERC721A NFT Contract
 /// @dev public/whitelist mint
 /// @author Seiji
-contract WhitelistMintNFT is ERC721A, Ownable, Pausable {
+contract WhitelistMintNFT is ERC721A, Ownable, Pausable, ReentrancyGuard {
     struct WhitelistSaleInfo {
         uint256 mintStartTime; // Start timestamp of minting
         uint256 mintEndTime; // End timestamp of minting
@@ -88,7 +89,7 @@ contract WhitelistMintNFT is ERC721A, Ownable, Pausable {
 
     /// @dev public mint
     /// @param _amount The number of minting NFTs
-    function publicSale(uint256 _amount) external payable virtual whenNotPaused mintCompliance(_amount) {
+    function publicSale(uint256 _amount) external payable virtual whenNotPaused nonReentrant mintCompliance(_amount) {
         if (!isEnabledPublicSale) revert PublicSaleNotAvailable();
         if (msg.value < pMintPrice * _amount) revert MintInsufficientFund();
 
@@ -105,7 +106,7 @@ contract WhitelistMintNFT is ERC721A, Ownable, Pausable {
         bytes32[] calldata _proof,
         uint256 _maxAmount,
         uint256 _amount
-    ) external payable virtual whenNotPaused mintCompliance(_amount) {
+    ) external payable virtual whenNotPaused nonReentrant mintCompliance(_amount) {
         WhitelistSaleInfo memory wlInfo = wlSaleInfos[wlSaleCounter];
 
         if (wlInfo.merkleRoot == "") revert WhitelistNotAvailable();
@@ -206,7 +207,7 @@ contract WhitelistMintNFT is ERC721A, Ownable, Pausable {
 
     /// @dev withdraw ETH by owner
     /// @param _to target address
-    function withdraw(address _to) external virtual onlyOwner {
+    function withdraw(address _to) external virtual nonReentrant onlyOwner {
         uint256 _depositedEth = address(this).balance;
         if (_depositedEth == 0) revert NoDepositedETH();
 
