@@ -108,8 +108,8 @@ By this command, you can get merkle-whitelist to `data/merkle_info.json` file.
 ```
 // Whitelist mint schedule 1
 export const MERKLE_ROOT1 = "0xeba5f4767e6818b2a67678d9e55ecc2a8f2127e88f6c83f604a52b141d7f86a9";   // Merkle root hash
-export const START_TIME1 = getTimestampFromDate(new Date("12/08/2022 03:45:00"));                   // Start time
-export const END_TIME1 = getTimestampFromDate(new Date("12/08/2022 04:00:00"));                     // End time
+export const START_TIME1 = getTimestampFromDate(new Date("2022-07-22T16:30:00Z"));                  // Start time
+export const END_TIME1 = getTimestampFromDate(new Date("2022-07-22T17:00:00Z"));                    // End time
 export const MINT_PRICE1 = ethers.utils.parseEther("0.05");                                         // whitelist mint price 0.05 ETH
 ```
 
