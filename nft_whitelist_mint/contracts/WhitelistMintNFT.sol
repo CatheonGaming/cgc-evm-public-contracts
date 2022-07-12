@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "hardhat/console.sol";
 
 /// @title Whitelist Mint ERC721A NFT Contract
 /// @dev public/whitelist mint
