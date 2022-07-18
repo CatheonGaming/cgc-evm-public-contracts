@@ -10,11 +10,11 @@ function getTimestampFromDate(date: Date) {
 }
 
 // Whitelist mint schedule 1
-export const MERKLE_ROOT1 = "0xd607f96af0be9b12afa652d3af4354a0d0588ae8dbfdfeeea617f7bcb9078279";
-export const START_TIME1 = getTimestampFromDate(new Date("2022-07-14T12:00:00Z"));
+export const MERKLE_ROOT1 = "0x93efe2dd21e75ef7fd7aa0258254724645b7e134e8587aa37ab72e855ef4ef23";
+export const START_TIME1 = getTimestampFromDate(new Date("2022-07-19T00:00:00Z"));
 export const END_TIME1 = getTimestampFromDate(new Date("2022-07-20T12:00:00Z"));
-export const MINT_PRICE1 = ethers.utils.parseEther("0.05");
-export const MERKLE_TOTAL = 40;
+export const MINT_PRICE1 = ethers.utils.parseEther("0.01");
+export const MERKLE_TOTAL = 30;
 
 // Public mint schedule
 export const START_TIME2 = getTimestampFromDate(new Date("2022-07-14T12:00:00Z"));
