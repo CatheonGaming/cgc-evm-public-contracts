@@ -3,12 +3,12 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import WhitelistMapManager from "../scripts/merkle/whitelist-map-manager";
 
-describe("WhitelistMintNFT", function () {
+describe("CGCWhitelistERC721A", function () {
   function parseETHWithDecimals(amount: string) {
     return ethers.utils.parseEther(amount);
   }
 
-  async function deployWhitelistMintNftFixture() {
+  async function deployCGCWhitelistERC721AFixture() {
     const NFT_NAME = "Onigiri NFT";
     const NFT_SYMBOL = "ONIGIRI";
     const URI_PREFIX = "https://ipfs.io/ipfs/QmWT3G8y72jj3i1GaxAbcMeuPqhLMrQHzJ9DCDRy3N7DsK/";
@@ -24,10 +24,10 @@ describe("WhitelistMintNFT", function () {
     // Contracts are deployed using the first signer/account by default
     const [owner, alice, bob, eve] = await ethers.getSigners();
 
-    // deploy WhitelistMintNft contract
-    const WhitelistMintNFT = await ethers.getContractFactory("WhitelistMintNFT", owner);
-    const whitelistMintNft = await WhitelistMintNFT.deploy(NFT_NAME, NFT_SYMBOL, MAX_SUPPLY, URI_PREFIX, MINT_PRICE);
-    await whitelistMintNft.deployed();
+    // deploy CGCWhitelistERC721A contract
+    const CGCWhitelistERC721A = await ethers.getContractFactory("CGCWhitelistERC721A", owner);
+    const cgcWhitelistERC721A = await CGCWhitelistERC721A.deploy(NFT_NAME, NFT_SYMBOL, MAX_SUPPLY, URI_PREFIX);
+    await cgcWhitelistERC721A.deployed();
 
     // merkle whitelist
     const whitelist = {
@@ -39,7 +39,7 @@ describe("WhitelistMintNFT", function () {
     const whitelistManager = new WhitelistMapManager(whitelist);
 
     return {
-      whitelistMintNft: whitelistMintNft,
+      cgcWhitelistERC721A,
       name: NFT_NAME,
       symbol: NFT_SYMBOL,
       mintPrice: MINT_PRICE,
@@ -49,6 +49,7 @@ describe("WhitelistMintNFT", function () {
       mintEndTime,
       merkleRoot: whitelistManager.merkleInfo.merkleRoot,
       list: whitelistManager.merkleInfo.list,
+      merkleTotal: Number(whitelistManager.merkleInfo.tokenTotal),
       owner,
       alice,
       bob,
@@ -58,60 +59,66 @@ describe("WhitelistMintNFT", function () {
 
   describe("Deployment", function () {
     it("Should set the right name and symbol, mint price, uri prefix, max supply", async function () {
-      const { whitelistMintNft, name, symbol, mintPrice, maxSupply, uriPrefix } = await loadFixture(
-        deployWhitelistMintNftFixture
+      const { cgcWhitelistERC721A, name, symbol, maxSupply, uriPrefix } = await loadFixture(
+        deployCGCWhitelistERC721AFixture
       );
 
-      expect(await whitelistMintNft.name()).to.equal(name);
-      expect(await whitelistMintNft.symbol()).to.equal(symbol);
-      expect(await whitelistMintNft.pMintPrice()).to.equal(mintPrice);
-      expect(await whitelistMintNft.maxSupply()).to.equal(maxSupply);
-      expect(await whitelistMintNft.uriPrefix()).to.equal(uriPrefix);
+      expect(await cgcWhitelistERC721A.name()).to.equal(name);
+      expect(await cgcWhitelistERC721A.symbol()).to.equal(symbol);
+      expect(await cgcWhitelistERC721A.maxSupply()).to.equal(maxSupply);
+      expect(await cgcWhitelistERC721A.uriPrefix()).to.equal(uriPrefix);
     });
 
     it("Should set the right paused flag", async function () {
-      const { whitelistMintNft } = await loadFixture(deployWhitelistMintNftFixture);
+      const { cgcWhitelistERC721A } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
-      expect(await whitelistMintNft.paused()).to.equal(false);
+      expect(await cgcWhitelistERC721A.paused()).to.equal(false);
     });
 
     it("Should set the right owner", async function () {
-      const { whitelistMintNft, owner } = await loadFixture(deployWhitelistMintNftFixture);
+      const { cgcWhitelistERC721A, owner } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
-      expect(await whitelistMintNft.owner()).to.equal(owner.address);
+      expect(await cgcWhitelistERC721A.owner()).to.equal(owner.address);
     });
   });
 
   describe("Set params", function () {
-    it("Can change the mint price ", async function () {
-      const { whitelistMintNft } = await loadFixture(deployWhitelistMintNftFixture);
-
-      const newMintPrice = parseETHWithDecimals("0.2");
-      await expect(whitelistMintNft.setPublicMintPrice(newMintPrice))
-        .to.emit(whitelistMintNft, "SetPublicMintPrice")
-        .withArgs(newMintPrice);
-    });
-
     it("Can set new merkle whitelist sale", async function () {
-      const { whitelistMintNft, merkleRoot, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
-        deployWhitelistMintNftFixture
+      const { cgcWhitelistERC721A, merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal } = await loadFixture(
+        deployCGCWhitelistERC721AFixture
       );
 
-      expect(await whitelistMintNft.wlSaleCounter()).to.equal(0);
+      expect(await cgcWhitelistERC721A.saleId()).to.equal(0);
 
-      await expect(whitelistMintNft.setWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice))
-        .to.emit(whitelistMintNft, "SetWhitelistSale")
-        .withArgs(merkleRoot, mintStartTime, mintEndTime, mintPrice);
+      await expect(
+        cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal)
+      )
+        .to.emit(cgcWhitelistERC721A, "SetupSaleInfo")
+        .withArgs(1, [mintStartTime, mintEndTime, merkleRoot, mintPrice, merkleTotal]);
 
-      expect(await whitelistMintNft.wlSaleCounter()).to.equal(1);
+      expect(await cgcWhitelistERC721A.saleId()).to.equal(1);
+    });
+
+    it("Can set new public sale", async function () {
+      const { cgcWhitelistERC721A, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+        deployCGCWhitelistERC721AFixture
+      );
+
+      expect(await cgcWhitelistERC721A.saleId()).to.equal(0);
+
+      await expect(cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3))
+        .to.emit(cgcWhitelistERC721A, "SetupSaleInfo")
+        .withArgs(1, [mintStartTime, mintEndTime, ethers.constants.HashZero, mintPrice, 3]);
+
+      expect(await cgcWhitelistERC721A.saleId()).to.equal(1);
     });
 
     it("Can change the token uri prefix", async function () {
-      const { whitelistMintNft } = await loadFixture(deployWhitelistMintNftFixture);
+      const { cgcWhitelistERC721A } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
       const newUriPrefix = "https://ipfs.io/ipfs/QmUIVD5yr9E7EFp9iFXcMeuPqp9iFXAGSbyKri6CFfL84M/";
-      expect(await whitelistMintNft.setUriPrefix(newUriPrefix))
-        .to.emit(whitelistMintNft, "SetUriPrefix")
+      expect(await cgcWhitelistERC721A.setUriPrefix(newUriPrefix))
+        .to.emit(cgcWhitelistERC721A, "SetUriPrefix")
         .withArgs(newUriPrefix);
     });
   });
@@ -119,9 +126,9 @@ describe("WhitelistMintNFT", function () {
   describe("Mint by owner", function () {
     describe("Validations", function () {
       it("Should revert with the right error if minted by non-owner", async function () {
-        const { whitelistMintNft, alice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, alice } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await expect(whitelistMintNft.connect(alice).mintForAddress(alice.address, 1)).to.be.revertedWith(
+        await expect(cgcWhitelistERC721A.connect(alice).mintForAddress(alice.address, 1)).to.be.revertedWith(
           "Ownable: caller is not the owner"
         );
       });
@@ -129,13 +136,13 @@ describe("WhitelistMintNFT", function () {
 
     describe("Events", function () {
       it("Should emit an event on mintForAddress", async function () {
-        const { whitelistMintNft, owner, alice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, owner, alice } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await expect(whitelistMintNft.connect(owner).mintForAddress(alice.address, 1))
-          .to.emit(whitelistMintNft, "Transfer")
+        await expect(cgcWhitelistERC721A.connect(owner).mintForAddress(alice.address, 1))
+          .to.emit(cgcWhitelistERC721A, "Transfer")
           .withArgs(ethers.constants.AddressZero, alice.address, 1);
 
-        const tokenIdsOfAlice = await whitelistMintNft.tokenIdsOf(alice.address);
+        const tokenIdsOfAlice = await cgcWhitelistERC721A.tokenIdsOf(alice.address);
         expect(tokenIdsOfAlice.length).to.equal(1);
         expect(tokenIdsOfAlice[0]).to.equal(1);
       });
@@ -145,63 +152,75 @@ describe("WhitelistMintNFT", function () {
   describe("Public Sale", function () {
     describe("Validations", function () {
       it("Should revert with the right error if called with lager amount than max supply", async function () {
-        const { whitelistMintNft, alice, maxSupply, mintPrice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, alice, maxSupply, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+          deployCGCWhitelistERC721AFixture
+        );
 
-        await whitelistMintNft.setEnabledPublicSale(true);
+        const PUBLIC_MINT_AMOUNT = 3;
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, PUBLIC_MINT_AMOUNT);
+        await time.increaseTo(mintStartTime);
 
         await expect(
-          whitelistMintNft.connect(alice).publicSale(maxSupply + 1, { value: mintPrice.mul(maxSupply + 1) })
-        ).to.be.revertedWithCustomError(whitelistMintNft, "MintMaxSupply");
+          cgcWhitelistERC721A.connect(alice).publicSale(4, { value: mintPrice.mul(maxSupply + 1) })
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "PublicSaleMaxSupply");
       });
 
       it("Should revert with the right error if called with insufficient fund", async function () {
-        const { whitelistMintNft, alice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+          deployCGCWhitelistERC721AFixture
+        );
 
-        await whitelistMintNft.setEnabledPublicSale(true);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await time.increaseTo(mintStartTime);
 
-        await expect(whitelistMintNft.connect(alice).publicSale(1, { value: 0 })).to.be.revertedWithCustomError(
-          whitelistMintNft,
+        await expect(cgcWhitelistERC721A.connect(alice).publicSale(1, { value: 0 })).to.be.revertedWithCustomError(
+          cgcWhitelistERC721A,
           "MintInsufficientFund"
         );
       });
 
       it("Should revert with the right error if called when set disabled the public sale", async function () {
-        const { whitelistMintNft, mintPrice, alice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, mintPrice, alice } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await expect(whitelistMintNft.connect(alice).publicSale(1, { value: mintPrice })).to.be.revertedWithCustomError(
-          whitelistMintNft,
-          "PublicSaleNotAvailable"
-        );
+        await expect(
+          cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice })
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "MintNotAvailable");
       });
 
       it("Should revert with the right error after pausing", async function () {
-        const { whitelistMintNft, mintPrice, alice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+          deployCGCWhitelistERC721AFixture
+        );
 
-        await whitelistMintNft.setEnabledPublicSale(true);
-        await whitelistMintNft.pause();
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await time.increaseTo(mintStartTime);
+        await cgcWhitelistERC721A.pause();
 
-        await expect(whitelistMintNft.connect(alice).publicSale(1, { value: mintPrice })).to.be.revertedWith(
+        await expect(cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice })).to.be.revertedWith(
           "Pausable: paused"
         );
 
-        await whitelistMintNft.unpause();
+        await cgcWhitelistERC721A.unpause();
 
-        await whitelistMintNft.connect(alice).publicSale(1, { value: mintPrice });
+        await cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice });
       });
     });
 
     describe("Events", function () {
       it("Should emit an event on publicSale", async function () {
-        const { whitelistMintNft, mintPrice, uriPrefix, alice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, uriPrefix, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+          deployCGCWhitelistERC721AFixture
+        );
 
-        await whitelistMintNft.setEnabledPublicSale(true);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await time.increaseTo(mintStartTime);
 
-        await expect(whitelistMintNft.connect(alice).publicSale(1, { value: mintPrice.mul(1) }))
-          .to.emit(whitelistMintNft, "Transfer")
+        await expect(cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice.mul(1) }))
+          .to.emit(cgcWhitelistERC721A, "Transfer")
           .withArgs(ethers.constants.AddressZero, alice.address, 1);
 
-        expect(await whitelistMintNft.tokenURI(1)).to.equal(`${uriPrefix}1`);
-        const tokenIdsOfAlice = await whitelistMintNft.tokenIdsOf(alice.address);
+        expect(await cgcWhitelistERC721A.tokenURI(1)).to.equal(`${uriPrefix}1`);
+        const tokenIdsOfAlice = await cgcWhitelistERC721A.tokenIdsOf(alice.address);
         expect(tokenIdsOfAlice.length).to.equal(1);
         expect(tokenIdsOfAlice[0]).to.equal(1);
       });
@@ -209,27 +228,35 @@ describe("WhitelistMintNFT", function () {
 
     describe("Transfer & Withdraw", function () {
       it("Should transfer the funds to the contract", async function () {
-        const { whitelistMintNft, mintPrice, alice } = await loadFixture(deployWhitelistMintNftFixture);
-
-        await whitelistMintNft.setEnabledPublicSale(true);
-
-        await expect(whitelistMintNft.connect(alice).publicSale(1, { value: mintPrice.mul(1) })).to.changeEtherBalance(
-          alice,
-          mintPrice.mul(-1)
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+          deployCGCWhitelistERC721AFixture
         );
+
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await time.increaseTo(mintStartTime);
+
+        await expect(
+          cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice.mul(1) })
+        ).to.changeEtherBalance(alice, mintPrice.mul(-1));
       });
 
       it("Should withdraw the funds from the contract after the public sale", async function () {
-        const { whitelistMintNft, mintPrice, owner, alice } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, owner, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+          deployCGCWhitelistERC721AFixture
+        );
 
-        await whitelistMintNft.setEnabledPublicSale(true);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await time.increaseTo(mintStartTime);
 
-        await whitelistMintNft.connect(alice).publicSale(1, { value: mintPrice.mul(1) });
+        await cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice.mul(1) });
 
-        expect(await ethers.provider.getBalance(whitelistMintNft.address)).to.equal(mintPrice);
+        expect(await ethers.provider.getBalance(cgcWhitelistERC721A.address)).to.equal(mintPrice);
 
-        await expect(whitelistMintNft.connect(owner).withdraw(owner.address)).to.changeEtherBalance(owner, mintPrice);
-        expect(await ethers.provider.getBalance(whitelistMintNft.address)).to.equal(0);
+        await expect(cgcWhitelistERC721A.connect(owner).withdraw(owner.address)).to.changeEtherBalance(
+          owner,
+          mintPrice
+        );
+        expect(await ethers.provider.getBalance(cgcWhitelistERC721A.address)).to.equal(0);
       });
     });
   });
@@ -237,119 +264,126 @@ describe("WhitelistMintNFT", function () {
   describe("Whitelist Sale", function () {
     describe("Validations", function () {
       it("Should revert with the right error if called when did not set merkle root", async function () {
-        const { whitelistMintNft, mintPrice, alice, list } = await loadFixture(deployWhitelistMintNftFixture);
+        const { cgcWhitelistERC721A, mintPrice, alice, list } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
         const userInfo = list[alice.address];
         await expect(
-          whitelistMintNft
+          cgcWhitelistERC721A
             .connect(alice)
             .whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 1, { value: mintPrice })
-        ).to.be.revertedWithCustomError(whitelistMintNft, "WhitelistNotAvailable");
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "WhitelistNotAvailable");
       });
 
       it("Should revert with the right error if called when did not set merkle root", async function () {
-        const { whitelistMintNft, mintStartTime, mintEndTime, alice, mintPrice, merkleRoot, list } = await loadFixture(
-          deployWhitelistMintNftFixture
-        );
+        const { cgcWhitelistERC721A, mintStartTime, mintEndTime, alice, mintPrice, merkleRoot, list, merkleTotal } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await whitelistMintNft.setWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice);
+        await cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal);
         await time.increaseTo(mintStartTime);
 
         const userInfo = list[alice.address];
         await expect(
-          whitelistMintNft.connect(alice).whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 2, {
+          cgcWhitelistERC721A.connect(alice).whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 2, {
             value: mintPrice.mul(2),
           })
-        ).to.be.revertedWithCustomError(whitelistMintNft, "WhitelistMaxSupply");
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "WhitelistSaleMaxSupply");
       });
 
       it("Should revert with the right error if called with insufficient fund", async function () {
-        const { whitelistMintNft, mintStartTime, mintEndTime, mintPrice, alice, merkleRoot, list } = await loadFixture(
-          deployWhitelistMintNftFixture
-        );
+        const { cgcWhitelistERC721A, mintStartTime, mintEndTime, mintPrice, alice, merkleRoot, list, merkleTotal } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await whitelistMintNft.setWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice);
+        await cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal);
         await time.increaseTo(mintStartTime);
 
         const userInfo = list[alice.address];
         await expect(
-          whitelistMintNft
+          cgcWhitelistERC721A
             .connect(alice)
             .whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 1, { value: 0 })
-        ).to.be.revertedWithCustomError(whitelistMintNft, "MintInsufficientFund");
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "MintInsufficientFund");
       });
 
       it("Should revert with the right error if called too soon", async function () {
-        const { whitelistMintNft, alice, mintStartTime, mintEndTime, mintPrice, merkleRoot, list } = await loadFixture(
-          deployWhitelistMintNftFixture
-        );
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice, merkleRoot, list, merkleTotal } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await whitelistMintNft.setWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice);
+        await cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal);
 
         const userInfo = list[alice.address];
         await expect(
-          whitelistMintNft
+          cgcWhitelistERC721A
             .connect(alice)
             .whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 1, { value: mintPrice })
-        ).to.be.revertedWithCustomError(whitelistMintNft, "MintNotAvailable");
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "MintNotAvailable");
       });
     });
 
     describe("Events", function () {
       it("Should emit an event on whitelist sale", async function () {
-        const { whitelistMintNft, mintStartTime, mintEndTime, mintPrice, alice, merkleRoot, list } = await loadFixture(
-          deployWhitelistMintNftFixture
-        );
+        const { cgcWhitelistERC721A, mintStartTime, mintEndTime, mintPrice, alice, merkleRoot, list, merkleTotal } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await whitelistMintNft.setWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice);
+        await cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal);
         await time.increaseTo(mintStartTime);
 
         const userInfo = list[alice.address];
-        expect(await whitelistMintNft.getWlMintedAmount(1, alice.address)).to.equal(0);
+        expect(await cgcWhitelistERC721A.mintedAmountOf(1, alice.address)).to.equal(0);
         await expect(
-          whitelistMintNft
+          cgcWhitelistERC721A
             .connect(alice)
             .whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 1, { value: mintPrice })
         )
-          .to.emit(whitelistMintNft, "Transfer")
+          .to.emit(cgcWhitelistERC721A, "Transfer")
           .withArgs(ethers.constants.AddressZero, alice.address, 1);
-        expect(await whitelistMintNft.getWlMintedAmount(1, alice.address)).to.equal(1);
+        expect(await cgcWhitelistERC721A.mintedAmountOf(1, alice.address)).to.equal(1);
       });
     });
 
     describe("Transfer & Withdraw", function () {
       it("Should transfer the funds to the contract", async function () {
-        const { whitelistMintNft, mintStartTime, mintEndTime, mintPrice, alice, merkleRoot, list } = await loadFixture(
-          deployWhitelistMintNftFixture
-        );
+        const { cgcWhitelistERC721A, mintStartTime, mintEndTime, mintPrice, alice, merkleRoot, list, merkleTotal } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await whitelistMintNft.setWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice);
+        await cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal);
         await time.increaseTo(mintStartTime);
 
         const userInfo = list[alice.address];
         await expect(
-          whitelistMintNft
+          cgcWhitelistERC721A
             .connect(alice)
             .whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 1, { value: mintPrice })
         ).to.changeEtherBalance(alice, mintPrice.mul(-1));
       });
 
       it("Should withdraw the funds from the contract after the whitelist sale", async function () {
-        const { whitelistMintNft, mintStartTime, mintEndTime, mintPrice, owner, alice, merkleRoot, list } =
-          await loadFixture(deployWhitelistMintNftFixture);
+        const {
+          cgcWhitelistERC721A,
+          mintStartTime,
+          mintEndTime,
+          mintPrice,
+          owner,
+          alice,
+          merkleRoot,
+          list,
+          merkleTotal,
+        } = await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await whitelistMintNft.setWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice);
+        await cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal);
         await time.increaseTo(mintStartTime);
 
         const userInfo = list[alice.address];
-        await whitelistMintNft
+        await cgcWhitelistERC721A
           .connect(alice)
           .whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 1, { value: mintPrice });
 
-        expect(await ethers.provider.getBalance(whitelistMintNft.address)).to.equal(mintPrice);
+        expect(await ethers.provider.getBalance(cgcWhitelistERC721A.address)).to.equal(mintPrice);
 
-        await expect(whitelistMintNft.connect(owner).withdraw(owner.address)).to.changeEtherBalance(owner, mintPrice);
-        expect(await ethers.provider.getBalance(whitelistMintNft.address)).to.equal(0);
+        await expect(cgcWhitelistERC721A.connect(owner).withdraw(owner.address)).to.changeEtherBalance(
+          owner,
+          mintPrice
+        );
+        expect(await ethers.provider.getBalance(cgcWhitelistERC721A.address)).to.equal(0);
       });
     });
   });
