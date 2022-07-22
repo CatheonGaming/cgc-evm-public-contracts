@@ -137,6 +137,7 @@ export const START_TIME2 = getTimestampFromDate(new Date("2022-07-22T17:30:00Z")
 export const END_TIME2 = getTimestampFromDate(new Date("2022-07-22T19:00:00Z"));                    // End time
 export const MINT_PRICE2 = ethers.utils.parseEther("0.1");                                          // whitelist mint price 0.05 ETH
 export const MINT_AMOUNT2 = 40;                                                                     // Mint amount
+export const MAX_PER_USER = 2;                                                                      // Max mint amount per user, 0: infinite mint, > 0: check max
 ```
 
 - Run command for setting public-mint schedule on contract

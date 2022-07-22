@@ -36,16 +36,19 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     error MintInsufficientFund();
     error WhitelistSaleMaxSupply();
     error PublicSaleMaxSupply();
+    error PublicSaleMaxUserSupply();
     error ScheduleOngoing();
     error NoDepositedETH();
     error InvalidSale();
     error InvalidMerkleRoot();
     error InvalidMintTime();
     error InvalidMintAmount();
+    error InvalidMaxSupply();
 
     // ******************  Events  *****************************
 
     event SetUriPrefix(string prifix);
+    event SetMaxSupply(uint256 maxSupply);
 
     // ******************  Modifiers  **************************
 
@@ -86,6 +89,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         if (msg.value < si.mintPrice * _amount) revert MintInsufficientFund();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
+        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > si.maxPerUser) revert PublicSaleMaxUserSupply();
         if (_amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
 
         unchecked {
@@ -142,6 +146,15 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         emit SetUriPrefix(_uriPrefix);
     }
 
+    /// @dev set NFT Max Supply by only collection owner
+    /// @param _maxSupply The max NFT supply
+    function setMaxSupply(uint256 _maxSupply) external onlyOwner {
+        if (_nextTokenId() > _maxSupply) revert InvalidMaxSupply();
+
+        maxSupply = _maxSupply;
+        emit SetMaxSupply(_maxSupply);
+    }
+
     /// @dev Collection owner should set merkle root and start/end timestamp in order to start new whitelist mint schedule.
     /// @param _merkleRoot new merkle root hash
     /// @param _mintStartTime The start time of minting
@@ -175,11 +188,13 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     /// @param _mintEndTime The end time of minting
     /// @param _mintPrice The mint price (ETH)
     /// @param _mintAmount The mint amount
+    /// @param _maxPerUser The
     function setupPublicSale(
         uint256 _mintStartTime,
         uint256 _mintEndTime,
         uint256 _mintPrice,
-        uint256 _mintAmount
+        uint256 _mintAmount,
+        uint256 _maxPerUser
     ) external override onlyOwner {
         if (_mintStartTime < block.timestamp || _mintEndTime <= _mintStartTime) revert InvalidMintTime();
         if (_mintAmount == 0) revert InvalidMintAmount();
@@ -190,6 +205,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         si.mintEndTime = _mintEndTime;
         si.mintPrice = _mintPrice;
         si.mintAmount = _mintAmount;
+        si.maxPerUser = _maxPerUser;
 
         emit SetupSaleInfo(saleId, si);
     }

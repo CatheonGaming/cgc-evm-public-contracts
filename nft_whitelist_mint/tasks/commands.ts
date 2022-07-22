@@ -3,6 +3,7 @@ import { TaskArguments } from "hardhat/types";
 import {
   END_TIME1,
   END_TIME2,
+  MAX_PER_USER,
   MERKLE_ROOT1,
   MERKLE_TOTAL,
   MINT_AMOUNT2,
@@ -36,8 +37,14 @@ task("set:PublicSale", "Set whitelist sale to CGCWhitelistERC721A contract")
     const cgcWhitelistERC721A = await hre.ethers.getContractAt("CGCWhitelistERC721A", taskArguments.address);
 
     // Deploy Contract
-    const tx = await cgcWhitelistERC721A.setupPublicSale(START_TIME2, END_TIME2, MINT_PRICE2, MINT_AMOUNT2);
+    const tx = await cgcWhitelistERC721A.setupPublicSale(
+      START_TIME2,
+      END_TIME2,
+      MINT_PRICE2,
+      MINT_AMOUNT2,
+      MAX_PER_USER
+    );
     await tx.wait();
 
-    console.log("Public sale was disabled by transaction:", tx.hash);
+    console.log("Public sale was set by transaction:", tx.hash);
   });
