@@ -42,7 +42,6 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     error InvalidSale();
     error InvalidMerkleRoot();
     error InvalidMintTime();
-    error InvalidMintAmount();
     error InvalidMaxSupply();
 
     // ******************  Events  *****************************
@@ -90,7 +89,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
         if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > si.maxPerUser) revert PublicSaleMaxUserSupply();
-        if (_amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
+        if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
 
         unchecked {
             _accountMintedAmounts[saleId][_msgSender()] += _amount;
@@ -120,7 +119,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         bytes32 leaf = keccak256(abi.encodePacked(_index, _msgSender(), _maxAmount));
         if (!MerkleProof.verify(_proof, si.merkleRoot, leaf)) revert InvalidSale();
 
-        if (_amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount) revert WhitelistSaleMaxSupply();
+        if (_maxAmount > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount) revert WhitelistSaleMaxSupply();
 
         unchecked {
             _accountMintedAmounts[saleId][_msgSender()] += _amount;
@@ -170,7 +169,6 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     ) external override onlyOwner {
         if (_merkleRoot == 0) revert InvalidMerkleRoot();
         if (_mintStartTime < block.timestamp || _mintEndTime <= _mintStartTime) revert InvalidMintTime();
-        if (_mintAmount == 0) revert InvalidMintAmount();
 
         ++saleId;
         SaleInfo storage si = _saleInfos[saleId];
@@ -197,7 +195,6 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         uint256 _maxPerUser
     ) external override onlyOwner {
         if (_mintStartTime < block.timestamp || _mintEndTime <= _mintStartTime) revert InvalidMintTime();
-        if (_mintAmount == 0) revert InvalidMintAmount();
 
         ++saleId;
         SaleInfo storage si = _saleInfos[saleId];
