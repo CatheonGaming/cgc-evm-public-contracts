@@ -34,6 +34,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     error WhitelistNotAvailable();
     error MintMaxSupply();
     error MintInsufficientFund();
+    error WhitelistSaleMaxUserSupply();
     error WhitelistSaleMaxSupply();
     error PublicSaleMaxSupply();
     error PublicSaleMaxUserSupply();
@@ -121,7 +122,8 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         if (!MerkleProof.verify(_proof, si.merkleRoot, leaf)) revert InvalidSale();
 
         if (_maxAmount > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount)
-            revert WhitelistSaleMaxSupply();
+            revert WhitelistSaleMaxUserSupply();
+        if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert WhitelistSaleMaxSupply();
 
         unchecked {
             _accountMintedAmounts[saleId][_msgSender()] += _amount;
