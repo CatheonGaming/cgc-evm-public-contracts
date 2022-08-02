@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "./IPhaseSalable.sol";
+import "./interfaces/IPhaseSalable.sol";
 
 /// @title Whitelist Mint ERC721A NFT Contract
 /// @dev Several phases of public/whitelist mint
@@ -88,7 +88,8 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         if (msg.value < si.mintPrice * _amount) revert MintInsufficientFund();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
-        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > si.maxPerUser) revert PublicSaleMaxUserSupply();
+        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > si.maxPerUser)
+            revert PublicSaleMaxUserSupply();
         if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
 
         unchecked {
@@ -119,7 +120,8 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         bytes32 leaf = keccak256(abi.encodePacked(_index, _msgSender(), _maxAmount));
         if (!MerkleProof.verify(_proof, si.merkleRoot, leaf)) revert InvalidSale();
 
-        if (_maxAmount > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount) revert WhitelistSaleMaxSupply();
+        if (_maxAmount > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount)
+            revert WhitelistSaleMaxSupply();
 
         unchecked {
             _accountMintedAmounts[saleId][_msgSender()] += _amount;
