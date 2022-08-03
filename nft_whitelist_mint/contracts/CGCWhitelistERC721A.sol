@@ -84,21 +84,33 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     /// @dev public mint
     /// @param _amount The number of minting NFTs
     function publicSale(uint256 _amount) external payable override whenNotPaused nonReentrant mintCompliance(_amount) {
+        _publicMint(_msgSender(), _amount);
+    }
+
+    /// @dev public mint
+    /// @param _amount The number of minting NFTs
+    function publicSaleTo(address to, uint256 _amount) external payable whenNotPaused nonReentrant mintCompliance(_amount) {
+        _publicMint(to, _amount);
+    }
+
+    /// @dev public mint
+    /// @param _amount The number of minting NFTs
+    function _publicMint(address to, uint256 _amount) private {
         SaleInfo memory si = _saleInfos[saleId];
         if (si.merkleRoot != 0) revert PublicSaleNotAvailable();
         if (msg.value < si.mintPrice * _amount) revert MintInsufficientFund();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
-        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > si.maxPerUser)
+        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][to] > si.maxPerUser)
             revert PublicSaleMaxUserSupply();
         if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
 
         unchecked {
-            _accountMintedAmounts[saleId][_msgSender()] += _amount;
+            _accountMintedAmounts[saleId][to] += _amount;
             _mintedAmounts[saleId] += _amount;
         }
 
-        _safeMint(_msgSender(), _amount);
+        _safeMint(to, _amount);
     }
 
     /// @dev whitelist mint
