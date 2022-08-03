@@ -33,7 +33,7 @@ export default class WhitelistMapManager {
 
   public addNodes(_nodes: OldFormat) {
     Object.keys(_nodes).forEach((account) => {
-      if (_nodes[account] <= 0 || account === constants.AddressZero) {
+      if (account === constants.AddressZero) {
         throw new Error("Invalid node: " + account);
       }
       if (this.whitelist[account] !== undefined) {
@@ -74,7 +74,6 @@ export default class WhitelistMapManager {
       const parsed = getAddress(account);
       if (memo[parsed]) throw new Error(`Duplicate address: ${parsed}`);
       const parsedNum = BigNumber.from(earnings);
-      if (parsedNum.lte(0)) throw new Error(`Invalid amount for account: ${account}`);
 
       memo[parsed] = {
         amount: parsedNum,

@@ -11,6 +11,7 @@ interface IPhaseSalable is ICGCMintVersion {
         bytes32 merkleRoot; // Merkle Tree Root Hash
         uint256 mintPrice; // Token Mint Price
         uint256 mintAmount; // Token Mint Amount
+        uint256 maxPerUser; // Max mint amount per user
     }
 
     event SetupSaleInfo(uint256 saleId, SaleInfo info);
@@ -50,7 +51,8 @@ interface IPhaseSalable is ICGCMintVersion {
         uint256 _mintStartTime,
         uint256 _mintEndTime,
         uint256 _mintPrice,
-        uint256 _mintAmount
+        uint256 _mintAmount,
+        uint256 _maxPerUser
     ) external;
 
     function withdraw(address _to) external;

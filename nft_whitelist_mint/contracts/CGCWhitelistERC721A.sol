@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "./IPhaseSalable.sol";
+import "./interfaces/IPhaseSalable.sol";
 
 /// @title Whitelist Mint ERC721A NFT Contract
 /// @dev Several phases of public/whitelist mint
@@ -34,18 +34,21 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     error WhitelistNotAvailable();
     error MintMaxSupply();
     error MintInsufficientFund();
+    error WhitelistSaleMaxUserSupply();
     error WhitelistSaleMaxSupply();
     error PublicSaleMaxSupply();
+    error PublicSaleMaxUserSupply();
     error ScheduleOngoing();
     error NoDepositedETH();
     error InvalidSale();
     error InvalidMerkleRoot();
     error InvalidMintTime();
-    error InvalidMintAmount();
+    error InvalidMaxSupply();
 
     // ******************  Events  *****************************
 
     event SetUriPrefix(string prifix);
+    event SetMaxSupply(uint256 maxSupply);
 
     // ******************  Modifiers  **************************
 
@@ -81,19 +84,33 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     /// @dev public mint
     /// @param _amount The number of minting NFTs
     function publicSale(uint256 _amount) external payable override whenNotPaused nonReentrant mintCompliance(_amount) {
+        _publicMint(_msgSender(), _amount);
+    }
+
+    /// @dev public mint
+    /// @param _amount The number of minting NFTs
+    function publicSaleTo(address to, uint256 _amount) external payable whenNotPaused nonReentrant mintCompliance(_amount) {
+        _publicMint(to, _amount);
+    }
+
+    /// @dev public mint
+    /// @param _amount The number of minting NFTs
+    function _publicMint(address to, uint256 _amount) private {
         SaleInfo memory si = _saleInfos[saleId];
         if (si.merkleRoot != 0) revert PublicSaleNotAvailable();
         if (msg.value < si.mintPrice * _amount) revert MintInsufficientFund();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
-        if (_amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
+        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][to] > si.maxPerUser)
+            revert PublicSaleMaxUserSupply();
+        if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
 
         unchecked {
-            _accountMintedAmounts[saleId][_msgSender()] += _amount;
+            _accountMintedAmounts[saleId][to] += _amount;
             _mintedAmounts[saleId] += _amount;
         }
 
-        _safeMint(_msgSender(), _amount);
+        _safeMint(to, _amount);
     }
 
     /// @dev whitelist mint
@@ -116,7 +133,9 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         bytes32 leaf = keccak256(abi.encodePacked(_index, _msgSender(), _maxAmount));
         if (!MerkleProof.verify(_proof, si.merkleRoot, leaf)) revert InvalidSale();
 
-        if (_amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount) revert WhitelistSaleMaxSupply();
+        if (_maxAmount > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount)
+            revert WhitelistSaleMaxUserSupply();
+        if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert WhitelistSaleMaxSupply();
 
         unchecked {
             _accountMintedAmounts[saleId][_msgSender()] += _amount;
@@ -142,6 +161,15 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         emit SetUriPrefix(_uriPrefix);
     }
 
+    /// @dev set NFT Max Supply by only collection owner
+    /// @param _maxSupply The max NFT supply
+    function setMaxSupply(uint256 _maxSupply) external onlyOwner {
+        if (_nextTokenId() > _maxSupply) revert InvalidMaxSupply();
+
+        maxSupply = _maxSupply;
+        emit SetMaxSupply(_maxSupply);
+    }
+
     /// @dev Collection owner should set merkle root and start/end timestamp in order to start new whitelist mint schedule.
     /// @param _merkleRoot new merkle root hash
     /// @param _mintStartTime The start time of minting
@@ -157,7 +185,6 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     ) external override onlyOwner {
         if (_merkleRoot == 0) revert InvalidMerkleRoot();
         if (_mintStartTime < block.timestamp || _mintEndTime <= _mintStartTime) revert InvalidMintTime();
-        if (_mintAmount == 0) revert InvalidMintAmount();
 
         ++saleId;
         SaleInfo storage si = _saleInfos[saleId];
@@ -175,14 +202,15 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     /// @param _mintEndTime The end time of minting
     /// @param _mintPrice The mint price (ETH)
     /// @param _mintAmount The mint amount
+    /// @param _maxPerUser The
     function setupPublicSale(
         uint256 _mintStartTime,
         uint256 _mintEndTime,
         uint256 _mintPrice,
-        uint256 _mintAmount
+        uint256 _mintAmount,
+        uint256 _maxPerUser
     ) external override onlyOwner {
         if (_mintStartTime < block.timestamp || _mintEndTime <= _mintStartTime) revert InvalidMintTime();
-        if (_mintAmount == 0) revert InvalidMintAmount();
 
         ++saleId;
         SaleInfo storage si = _saleInfos[saleId];
@@ -190,6 +218,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         si.mintEndTime = _mintEndTime;
         si.mintPrice = _mintPrice;
         si.mintAmount = _mintAmount;
+        si.maxPerUser = _maxPerUser;
 
         emit SetupSaleInfo(saleId, si);
     }

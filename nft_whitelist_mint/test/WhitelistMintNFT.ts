@@ -2,6 +2,7 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import WhitelistMapManager from "../scripts/merkle/whitelist-map-manager";
+import { BigNumber } from "ethers";
 
 describe("CGCWhitelistERC721A", function () {
   function parseETHWithDecimals(amount: string) {
@@ -13,6 +14,7 @@ describe("CGCWhitelistERC721A", function () {
     const NFT_SYMBOL = "ONIGIRI";
     const URI_PREFIX = "https://ipfs.io/ipfs/QmWT3G8y72jj3i1GaxAbcMeuPqhLMrQHzJ9DCDRy3N7DsK/";
     const MAX_SUPPLY = 5;
+    const MAX_PER_USER = 2;
 
     const ONE_DAY_IN_SECS = 24 * 60 * 60;
     const THREE_DAYS_IN_SECS = 3 * 24 * 60 * 60;
@@ -45,6 +47,7 @@ describe("CGCWhitelistERC721A", function () {
       mintPrice: MINT_PRICE,
       maxSupply: MAX_SUPPLY,
       uriPrefix: URI_PREFIX,
+      maxPerUser: MAX_PER_USER,
       mintStartTime,
       mintEndTime,
       merkleRoot: whitelistManager.merkleInfo.merkleRoot,
@@ -80,6 +83,12 @@ describe("CGCWhitelistERC721A", function () {
 
       expect(await cgcWhitelistERC721A.owner()).to.equal(owner.address);
     });
+
+    it("Should set the right version", async function () {
+      const { cgcWhitelistERC721A } = await loadFixture(deployCGCWhitelistERC721AFixture);
+
+      expect(await cgcWhitelistERC721A.getVersionCode()).to.equal(0);
+    });
   });
 
   describe("Set params", function () {
@@ -94,23 +103,39 @@ describe("CGCWhitelistERC721A", function () {
         cgcWhitelistERC721A.setupWhitelistSale(merkleRoot, mintStartTime, mintEndTime, mintPrice, merkleTotal)
       )
         .to.emit(cgcWhitelistERC721A, "SetupSaleInfo")
-        .withArgs(1, [mintStartTime, mintEndTime, merkleRoot, mintPrice, merkleTotal]);
+        .withArgs(1, [mintStartTime, mintEndTime, merkleRoot, mintPrice, merkleTotal, 0]);
 
       expect(await cgcWhitelistERC721A.saleId()).to.equal(1);
     });
 
     it("Can set new public sale", async function () {
-      const { cgcWhitelistERC721A, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+      const { cgcWhitelistERC721A, mintStartTime, mintEndTime, mintPrice, maxPerUser } = await loadFixture(
         deployCGCWhitelistERC721AFixture
       );
 
       expect(await cgcWhitelistERC721A.saleId()).to.equal(0);
 
-      await expect(cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3))
+      await expect(cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3, maxPerUser))
         .to.emit(cgcWhitelistERC721A, "SetupSaleInfo")
-        .withArgs(1, [mintStartTime, mintEndTime, ethers.constants.HashZero, mintPrice, 3]);
+        .withArgs(1, [mintStartTime, mintEndTime, ethers.constants.HashZero, mintPrice, 3, maxPerUser]);
 
       expect(await cgcWhitelistERC721A.saleId()).to.equal(1);
+
+      let [startTime, endTime, merkleRoot, price, mintAmount, max] = await cgcWhitelistERC721A.saleInfo(1);
+      expect(startTime).to.equal(BigNumber.from(mintStartTime));
+      expect(endTime).to.equal(BigNumber.from(mintEndTime));
+      expect(merkleRoot).to.equal(ethers.constants.HashZero);
+      expect(price).to.equal(mintPrice);
+      expect(mintAmount).to.equal(BigNumber.from(mintAmount));
+      expect(max).to.equal(BigNumber.from(maxPerUser));
+
+      [startTime, endTime, merkleRoot, price, mintAmount, max] = await cgcWhitelistERC721A.activeSaleInfo();
+      expect(startTime).to.equal(BigNumber.from(mintStartTime));
+      expect(endTime).to.equal(BigNumber.from(mintEndTime));
+      expect(merkleRoot).to.equal(ethers.constants.HashZero);
+      expect(price).to.equal(mintPrice);
+      expect(mintAmount).to.equal(BigNumber.from(mintAmount));
+      expect(max).to.equal(BigNumber.from(maxPerUser));
     });
 
     it("Can change the token uri prefix", async function () {
@@ -120,6 +145,23 @@ describe("CGCWhitelistERC721A", function () {
       expect(await cgcWhitelistERC721A.setUriPrefix(newUriPrefix))
         .to.emit(cgcWhitelistERC721A, "SetUriPrefix")
         .withArgs(newUriPrefix);
+    });
+
+    it("Can change the token max supply", async function () {
+      const { cgcWhitelistERC721A, alice, maxSupply } = await loadFixture(deployCGCWhitelistERC721AFixture);
+
+      await cgcWhitelistERC721A.mintForAddress(alice.address, maxSupply);
+
+      let newMaxSupply = maxSupply - 1;
+      await expect(cgcWhitelistERC721A.setMaxSupply(newMaxSupply)).to.revertedWithCustomError(
+        cgcWhitelistERC721A,
+        "InvalidMaxSupply"
+      );
+
+      newMaxSupply = maxSupply + 1;
+      expect(await cgcWhitelistERC721A.setMaxSupply(newMaxSupply))
+        .to.emit(cgcWhitelistERC721A, "SetMaxSupply")
+        .withArgs(newMaxSupply);
     });
   });
 
@@ -152,25 +194,51 @@ describe("CGCWhitelistERC721A", function () {
   describe("Public Sale", function () {
     describe("Validations", function () {
       it("Should revert with the right error if called with lager amount than max supply", async function () {
-        const { cgcWhitelistERC721A, alice, maxSupply, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+        const { cgcWhitelistERC721A, alice, bob, mintStartTime, mintEndTime, mintPrice, maxPerUser } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
+
+        const PUBLIC_MINT_AMOUNT = 3;
+        await cgcWhitelistERC721A.setupPublicSale(
+          mintStartTime,
+          mintEndTime,
+          mintPrice,
+          PUBLIC_MINT_AMOUNT,
+          maxPerUser
+        );
+        await time.increaseTo(mintStartTime);
+
+        await cgcWhitelistERC721A.connect(alice).publicSale(2, { value: mintPrice.mul(2) });
+        await expect(
+          cgcWhitelistERC721A.connect(bob).publicSale(2, { value: mintPrice.mul(2) })
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "PublicSaleMaxSupply");
+      });
+
+      it("Should revert with the right error if called with lager amount than max supply", async function () {
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice, maxPerUser } = await loadFixture(
           deployCGCWhitelistERC721AFixture
         );
 
         const PUBLIC_MINT_AMOUNT = 3;
-        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, PUBLIC_MINT_AMOUNT);
+        await cgcWhitelistERC721A.setupPublicSale(
+          mintStartTime,
+          mintEndTime,
+          mintPrice,
+          PUBLIC_MINT_AMOUNT,
+          maxPerUser
+        );
         await time.increaseTo(mintStartTime);
 
         await expect(
-          cgcWhitelistERC721A.connect(alice).publicSale(4, { value: mintPrice.mul(maxSupply + 1) })
-        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "PublicSaleMaxSupply");
+          cgcWhitelistERC721A.connect(alice).publicSale(3, { value: mintPrice.mul(3) })
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "PublicSaleMaxUserSupply");
       });
 
       it("Should revert with the right error if called with insufficient fund", async function () {
-        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice, maxPerUser } = await loadFixture(
           deployCGCWhitelistERC721AFixture
         );
 
-        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3, maxPerUser);
         await time.increaseTo(mintStartTime);
 
         await expect(cgcWhitelistERC721A.connect(alice).publicSale(1, { value: 0 })).to.be.revertedWithCustomError(
@@ -188,11 +256,11 @@ describe("CGCWhitelistERC721A", function () {
       });
 
       it("Should revert with the right error after pausing", async function () {
-        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice, maxPerUser } = await loadFixture(
           deployCGCWhitelistERC721AFixture
         );
 
-        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3, maxPerUser);
         await time.increaseTo(mintStartTime);
         await cgcWhitelistERC721A.pause();
 
@@ -208,11 +276,10 @@ describe("CGCWhitelistERC721A", function () {
 
     describe("Events", function () {
       it("Should emit an event on publicSale", async function () {
-        const { cgcWhitelistERC721A, uriPrefix, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
-          deployCGCWhitelistERC721AFixture
-        );
+        const { cgcWhitelistERC721A, uriPrefix, alice, mintStartTime, mintEndTime, mintPrice, maxPerUser } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3, maxPerUser);
         await time.increaseTo(mintStartTime);
 
         await expect(cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice.mul(1) }))
@@ -228,11 +295,11 @@ describe("CGCWhitelistERC721A", function () {
 
     describe("Transfer & Withdraw", function () {
       it("Should transfer the funds to the contract", async function () {
-        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
+        const { cgcWhitelistERC721A, alice, mintStartTime, mintEndTime, mintPrice, maxPerUser } = await loadFixture(
           deployCGCWhitelistERC721AFixture
         );
 
-        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3, maxPerUser);
         await time.increaseTo(mintStartTime);
 
         await expect(
@@ -241,11 +308,10 @@ describe("CGCWhitelistERC721A", function () {
       });
 
       it("Should withdraw the funds from the contract after the public sale", async function () {
-        const { cgcWhitelistERC721A, owner, alice, mintStartTime, mintEndTime, mintPrice } = await loadFixture(
-          deployCGCWhitelistERC721AFixture
-        );
+        const { cgcWhitelistERC721A, owner, alice, mintStartTime, mintEndTime, mintPrice, maxPerUser } =
+          await loadFixture(deployCGCWhitelistERC721AFixture);
 
-        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3);
+        await cgcWhitelistERC721A.setupPublicSale(mintStartTime, mintEndTime, mintPrice, 3, maxPerUser);
         await time.increaseTo(mintStartTime);
 
         await cgcWhitelistERC721A.connect(alice).publicSale(1, { value: mintPrice.mul(1) });
@@ -328,7 +394,9 @@ describe("CGCWhitelistERC721A", function () {
         await time.increaseTo(mintStartTime);
 
         const userInfo = list[alice.address];
+        expect(await cgcWhitelistERC721A.mintedAmount(1)).to.equal(0);
         expect(await cgcWhitelistERC721A.mintedAmountOf(1, alice.address)).to.equal(0);
+
         await expect(
           cgcWhitelistERC721A
             .connect(alice)
@@ -336,6 +404,8 @@ describe("CGCWhitelistERC721A", function () {
         )
           .to.emit(cgcWhitelistERC721A, "Transfer")
           .withArgs(ethers.constants.AddressZero, alice.address, 1);
+
+        expect(await cgcWhitelistERC721A.mintedAmount(1)).to.equal(1);
         expect(await cgcWhitelistERC721A.mintedAmountOf(1, alice.address)).to.equal(1);
       });
     });
