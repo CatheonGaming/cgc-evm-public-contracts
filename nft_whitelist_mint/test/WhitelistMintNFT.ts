@@ -352,7 +352,7 @@ describe("CGCWhitelistERC721A", function () {
           cgcWhitelistERC721A.connect(alice).whitelistSale(userInfo.index, userInfo.proof, userInfo.amount, 2, {
             value: mintPrice.mul(2),
           })
-        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "WhitelistSaleMaxSupply");
+        ).to.be.revertedWithCustomError(cgcWhitelistERC721A, "WhitelistSaleMaxUserSupply");
       });
 
       it("Should revert with the right error if called with insufficient fund", async function () {
