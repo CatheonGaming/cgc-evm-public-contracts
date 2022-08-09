@@ -20,6 +20,8 @@ interface IPhaseSalable is ICGCMintVersion {
 
     function maxSupply() external view returns (uint256);
 
+    function nextTokenId() external view returns (uint256);
+
     function saleId() external view returns (uint256);
 
     function saleInfo(uint256 _saleId) external view returns (SaleInfo memory);
@@ -38,6 +40,10 @@ interface IPhaseSalable is ICGCMintVersion {
     ) external payable;
 
     function publicSale(uint256 _amount) external payable;
+
+    function publicSaleTo(address to, uint256 _amount) external payable;
+
+    function mintForAddress(address _to, uint256 _amount) external;
 
     function setupWhitelistSale(
         bytes32 _merkleRoot,

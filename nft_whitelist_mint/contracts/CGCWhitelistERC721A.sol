@@ -77,8 +77,13 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     }
 
     /// @dev Get CGC Mint Contract Version
-    function getVersionCode() external pure returns (uint8) {
+    function getVersionCode() external override pure returns (uint8) {
         return 0;
+    }
+
+    /// @dev Get the next token Id of minting
+    function nextTokenId() external override view returns (uint256) {
+        return _nextTokenId();
     }
 
     /// @dev public mint
@@ -87,9 +92,10 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         _publicMint(_msgSender(), _amount);
     }
 
-    /// @dev public mint
+    /// @dev public mint to
+    /// @param to The target address
     /// @param _amount The number of minting NFTs
-    function publicSaleTo(address to, uint256 _amount) external payable whenNotPaused nonReentrant mintCompliance(_amount) {
+    function publicSaleTo(address to, uint256 _amount) external override payable whenNotPaused nonReentrant mintCompliance(_amount) {
         _publicMint(to, _amount);
     }
 
@@ -148,7 +154,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     /// @dev Mint function for owner that allows for free minting for a specified address
     /// @param _to The address of receiver
     /// @param _amount The amount of minting
-    function mintForAddress(address _to, uint256 _amount) external mintCompliance(_amount) onlyOwner {
+    function mintForAddress(address _to, uint256 _amount) external override mintCompliance(_amount) onlyOwner {
         _safeMint(_to, _amount);
     }
 
