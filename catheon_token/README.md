@@ -4,16 +4,16 @@
 Ownable, Upgradeable ERC20 contract.
 
 ## Requirement
-- Initial max supply (10 billion)
-- Apply fee in token-transfer transactions between users excluding service addresses ( 90% >= fee percentage > 0%, default: 5%)
-- The fee should be transferred to treasury address
-- Mint/Burn tokens by only owner
+- Initial max supply (10 billion).
+- Apply fee in token-transfer transactions between users excluding service addresses ( 90% >= fee percentage > 0%, default: 5%).
+- The fee should be transferred to treasury address.
+- Mint/Burn tokens by only owner.
 - Only owner can change `fee_percentage`, `services`, `treasury`, `max_supply`.
 
 ## Implement
 > Language: Solidity  
 > Framework: Hardhat  
-> Networks: Polygon, Ethereum, BSC
+> Networks: Polygon, Ethereum, BSC  
 > Unit Test: Hardhat, Chai
 
 ## Installation
@@ -35,13 +35,13 @@ REPORT_GAS=<true_or_false>
 #### 2. Build token contract
 Build Smart Contract
 ```shell
-yarn compile
+$ yarn compile
 ```
 
 #### 3. Test
 Unit Test of Smart Contract
 ```shell
-yarn test
+$ yarn test
 ```
 
 #### 4. Deploy Token Contract on Polygon
@@ -59,5 +59,5 @@ export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";
 - Deploy Token Contract on Polygon
 
 ```shell
-yarn deploy --network polygon
+$ yarn deploy --network polygon
 ```
