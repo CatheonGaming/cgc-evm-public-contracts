@@ -2,180 +2,182 @@
 
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /// Catheon token
-/// @dev The ownable ERC20 token contract
-contract CatheonToken is ERC20, Ownable {
-    address private serviceAddress;
+/// @dev The ownable, upgradeable ERC20 contract
+contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
+    // service addresses
+    mapping(address => bool) public services;
+    // max total supply limit 10_000_000_000 * DECIMAL
+    uint256 public maxSupply;
+    // treasury address
+    address private _treasury;
+    // token-transfer fee percentage
+    uint16 private _feePercent;
+    // mint flag
+    bool private paused;
+    // fee percentage division
+    uint16 private constant PERCENTAGE_DIVISION = 1000;
 
-    address private presaleAddress;
+    event SetPaused(bool status);
+    event SetTreasury(address treasury);
+    event SetService(address service, bool enable);
+    event SetFeePercent(uint16 percentage);
+    event SetMaxSupply(uint256 supply);
 
-    uint16 private feePercent = 15; //1.5%
+    function initialize(
+        string memory name_,
+        string memory symbol_,
+        uint256 initialBalance_,
+        address treasury_
+    ) public initializer {
+        require(initialBalance_ > 0, "Initial Supply Zero");
+        require(treasury_ != address(0), "Zero Treasury Address");
 
-    bool private canMint = false;
+        _treasury = treasury_;
+        services[msg.sender] = true;
 
-    // apply max total supply limit
-    bool private mintingFinished = false;
+        /// default max supply 10_000_000_000 * (10 ** decimals)
+        maxSupply = 1e19;
+        /// default fee percentage (5%)
+        _feePercent = 50;
 
-    // max total supply limit 10,000,000,000 * DECIMAL
-    uint256 private constant MAX_TOTAL_SUPPLY_LIMIT = 1e19;
+        _mint(msg.sender, initialBalance_);
 
-    event UpdateMintStatus(bool oldStatus, bool newStatus);
-    event SetServiceAddress(address oldAddress, address newAddress);
-    event SetPresaleAddress(address oldAddress, address newAddress);
-    event SetFeePercent(uint16 oldFee, uint16 newSNewFee);
-    event UpdateMintingFinished(
-        bool oldMintingFinished,
-        bool newMintingFinished
-    );
-
-    constructor(
-        string memory name,
-        string memory symbol,
-        uint256 initialBalance
-    ) ERC20(name, symbol) {
-        require(initialBalance > 0, "Initial Supply Zero");
-
-        _mint(msg.sender, initialBalance);
+        /// initialize ERC20
+        __ERC20_init(name_, symbol_);
+        /// initialize Ownable
+        __Ownable_init();
     }
 
+    /// @dev mint token by owner
+    /// @param account Target address
+    /// @param amount Mint amount
     function mint(address account, uint256 amount) external onlyOwner {
-        require(!canMint, "Minting Unavailable");
+        require(!paused, "Mint Unavailable");
 
         _mint(account, amount);
     }
 
+    /// @dev token decimals
     function decimals() public pure override returns (uint8) {
         return 9;
     }
 
+    /// @dev internal transfer token
+    /// @param sender From address
+    /// @param recipient To address
+    /// @param amount Token amount
     function _transfer(
         address sender,
         address recipient,
         uint256 amount
     ) internal override {
         uint256 receiveAmount = amount;
-        uint256 feePercent = feePercent;
-        address serviceAddress = serviceAddress;
-        address presaleAddress = presaleAddress;
+        address treasuryAddress = _treasury;
 
-        // feePercent can not be zero (initial: 1.5% and can not set as zero in "setFee" function)
         if (
-            sender != presaleAddress &&
-            sender != serviceAddress &&
-            serviceAddress != recipient &&
-            serviceAddress != address(0)
+            services[sender] != true &&
+            sender != treasuryAddress &&
+            services[recipient] != true &&
+            recipient != treasuryAddress
         ) {
-            uint256 feeAmount = (amount * feePercent) / 1000;
+            uint256 feeAmount = (amount * _feePercent) / PERCENTAGE_DIVISION;
             receiveAmount = amount - feeAmount;
 
             // feeAmount can not be zero in here
-            super._transfer(sender, serviceAddress, feeAmount);
+            ERC20Upgradeable._transfer(sender, treasuryAddress, feeAmount);
         }
 
-        super._transfer(sender, recipient, receiveAmount);
+        ERC20Upgradeable._transfer(sender, recipient, receiveAmount);
     }
 
-    // @notice public -> external (for saving gas)
-    function setService(address value) external onlyOwner {
-        address oldServiceAddress = serviceAddress;
-
+    /// @dev Set new treasury address by owner
+    /// @param to Target address
+    function setTreasury(address to) external onlyOwner {
         require(
-            value != address(0) && value != oldServiceAddress,
-            "Invalid Service Address"
+            to != address(0) && to != _treasury,
+            "Invalid Treasury Address"
         );
 
-        serviceAddress = value;
+        _treasury = to;
 
-        emit SetServiceAddress(oldServiceAddress, value);
+        emit SetTreasury(to);
     }
 
-    // @notice public -> external (for saving gas)
-    function setPresale(address value) external onlyOwner {
-        address oldPresaleAddress = presaleAddress;
+    /// @dev Set service address by owner
+    /// @param service Service address
+    /// @param enable Flag (true: set, false: unset)
+    function setService(address service, bool enable) external onlyOwner {
+        require(services[service] != enable, "Already Set");
 
-        require(
-            value != address(0) && value != oldPresaleAddress,
-            "Invalid Presale Address"
-        );
+        services[service] = enable;
 
-        presaleAddress = value;
-
-        emit SetPresaleAddress(oldPresaleAddress, value);
+        emit SetService(service, enable);
     }
 
-    // @notice public -> external (for saving gas), add "feePercent" parameter validation (9000 >= feePercent > 0)
-    function setFee(uint16 feePercent) external onlyOwner {
-        require(feePercent != 0 && feePercent <= 900, "Invalid Fee Percentage");
+    /// @dev Set fee percentage by owner
+    /// @param percentage Fee percentage
+    function setFee(uint16 percentage) external onlyOwner {
+        require(percentage != 0 && percentage <= 900, "Invalid Fee Percentage");
+        require(_feePercent != percentage, "Same Fee Percentage");
 
-        uint16 oldFeePercent = feePercent;
-        require(oldFeePercent != feePercent, "Same Fee Percentage");
+        _feePercent = percentage;
 
-        feePercent = feePercent;
-
-        emit SetFeePercent(oldFeePercent, feePercent);
+        emit SetFeePercent(percentage);
     }
 
-    // @notice public -> external (for saving gas)
+    /// @dev get current fee percentage
     function fee() external view returns (uint16) {
-        return feePercent;
+        return _feePercent;
     }
 
-    // public -> external (for saving gas)
-    function service() external view returns (address) {
-        return serviceAddress;
+    /// @dev get current treasury address
+    function treasury() external view returns (address) {
+        return _treasury;
     }
 
-    // public -> external (for saving gas)
-    function presale() external view returns (address) {
-        return presaleAddress;
+    /// @dev get the status whether token can be minted or not.
+    function isPaused() external view returns (bool) {
+        return paused;
     }
 
-    function setMint(bool _canMint) external onlyOwner {
-        bool oldStatus = canMint;
-        bool newStatus = _canMint;
+    /// @dev Set pause flag of minting by owner
+    /// @param to Paused flag (true: pause minting, false: unpause)
+    function setPaused(bool to) external onlyOwner {
+        require(paused != to, "Same Status");
 
-        require(oldStatus != newStatus, "Same Mint Status");
-
-        canMint = _canMint;
-        emit UpdateMintStatus(oldStatus, newStatus);
+        paused = to;
+        emit SetPaused(to);
     }
 
-    /// @notice override ERC20`s _mint function for adding max_total_supply limit validation
+    /// @dev override ERC20`s _mint function for adding max_total_supply limit validation
     /// @param account The target address minting tokens
     /// @param amount The minting token amount
     function _mint(address account, uint256 amount) internal override {
         // if s_mintingFinished is set, check total supply limit
-        if (mintingFinished) {
-            uint256 afterTotalSupply = totalSupply() + amount;
-            require(
-                afterTotalSupply <= MAX_TOTAL_SUPPLY_LIMIT,
-                "Limited By Total Supply"
-            );
-        }
+        uint256 _totalSupply = totalSupply();
+        require(_totalSupply + amount <= maxSupply, "Limited By Max Supply");
 
         // call ERC20 _mint function
-        super._mint(account, amount);
+        ERC20Upgradeable._mint(account, amount);
     }
 
-    // read the minting_finished flag
-    function mintingFinished() external view returns (bool) {
-        return mintingFinished;
+    /// @dev Set new max supply by owner
+    /// @param supply The new max supply amount
+    function setMaxSupply(uint256 supply) external onlyOwner {
+        require(totalSupply() <= supply, "Invalid Max Supply");
+
+        maxSupply = supply;
+
+        emit SetMaxSupply(supply);
     }
 
-    // set the minting_finished flag
-    /// @param _mintingFinished The new minting_finished flag
-    function setMintingFinished(bool _mintingFinished) external onlyOwner {
-        bool oldMintingFinished = mintingFinished;
-        require(
-            oldMintingFinished != _mintingFinished,
-            "Same Minting Finished"
-        );
-
-        mintingFinished = _mintingFinished;
-
-        emit UpdateMintingFinished(oldMintingFinished, _mintingFinished);
+    /// @dev Burn token by owner
+    /// @param amount Burning token amount
+    function burn(uint256 amount) external onlyOwner {
+        _burn(_msgSender(), amount);
     }
 }

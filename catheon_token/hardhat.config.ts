@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-
+import "@openzeppelin/hardhat-upgrades";
 import "./scripts/deploy";
 
 dotenv.config();
@@ -65,7 +65,7 @@ const config: HardhatUserConfig = {
     cache: "./build/cache",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: process.env.SCAN_API_KEY,
   },
 };
 

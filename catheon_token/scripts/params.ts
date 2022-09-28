@@ -1,3 +1,4 @@
 export const TOKEN_NAME = "CATHEON TOKEN";
 export const TOKEN_SYMBOL = "CATHEON";
 export const INITIAL_SUPPLY = 1000_000_000;
+export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";

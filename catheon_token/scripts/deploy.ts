@@ -3,7 +3,7 @@
 //
 // When running the script with `npx smart-contract run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { INITIAL_SUPPLY, TOKEN_NAME, TOKEN_SYMBOL } from "./params";
+import { INITIAL_SUPPLY, TOKEN_NAME, TOKEN_SYMBOL, TREASURY } from "./params";
 import { task } from "hardhat/config";
 import { TaskArguments } from "hardhat/types";
 
@@ -11,31 +11,18 @@ task("deploy:Catheon", "Deploy Catheon Token").setAction(async function (
   taskArguments: TaskArguments,
   hre
 ) {
-  const WChicksFactory = await hre.ethers.getContractFactory("CatheonToken");
+  const CatheonTokenFactory = await hre.ethers.getContractFactory(
+    "CatheonToken"
+  );
 
   // Deploy Contract
-  const wChicksContract = await WChicksFactory.deploy(
+  const catheonToken = await hre.upgrades.deployProxy(CatheonTokenFactory, [
     TOKEN_NAME,
     TOKEN_SYMBOL,
-    hre.ethers.utils.parseUnits(INITIAL_SUPPLY.toString(), 9)
-  );
-  await wChicksContract.deployed();
+    hre.ethers.utils.parseUnits(INITIAL_SUPPLY.toString(), 9),
+    TREASURY,
+  ]);
+  await catheonToken.deployed();
 
-  console.log("Catheon Token deployed to:", wChicksContract.address);
+  console.log("Catheon Token deployed to:", catheonToken.address);
 });
-
-task("verify:Catheon", "Verify Catheon Token")
-  .addParam("address", "the deployed token contract address")
-  .setAction(async function (taskArguments: TaskArguments, hre) {
-    // Verify Contract
-    await hre.run("verify:verify", {
-      address: taskArguments.address,
-      constructorArguments: [
-        TOKEN_NAME,
-        TOKEN_SYMBOL,
-        hre.ethers.utils.parseUnits(INITIAL_SUPPLY.toString(), 9),
-      ],
-    });
-
-    console.log("Catheon Token was verified successfully!");
-  });
