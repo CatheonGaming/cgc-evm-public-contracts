@@ -107,12 +107,12 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         if (msg.value < si.mintPrice * _amount) revert MintInsufficientFund();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
-        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > si.maxPerUser)
+        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][to] > si.maxPerUser)
             revert PublicSaleMaxUserSupply();
         if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
 
         unchecked {
-            _accountMintedAmounts[saleId][_msgSender()] += _amount;
+            _accountMintedAmounts[saleId][to] += _amount;
             _mintedAmounts[saleId] += _amount;
         }
 
