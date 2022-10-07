@@ -46,6 +46,7 @@ contract CGCWhitelistERC721AV1 is ERC721A, Ownable, Pausable, ReentrancyGuard, I
     error InvalidMerkleRoot();
     error InvalidMintTime();
     error InvalidMaxSupply();
+    error WithERC20NotAvailable();
 
     // ******************  Events  *****************************
 
@@ -164,6 +165,7 @@ contract CGCWhitelistERC721AV1 is ERC721A, Ownable, Pausable, ReentrancyGuard, I
         address to = _msgSender();
 
         if (si.merkleRoot != 0) revert PublicSaleNotAvailable();
+        if (si.erc20Token == address(0)) revert WithERC20NotAvailable();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
         uint256 accountMintedAmount = _accountMintedAmounts[saleId][to];
@@ -177,7 +179,9 @@ contract CGCWhitelistERC721AV1 is ERC721A, Ownable, Pausable, ReentrancyGuard, I
             _mintedAmounts[saleId] = saleMintedAmount + _amount;
         }
 
-        IERC20(si.erc20Token).transferFrom(to, address(this), si.tokenAmount * _amount);
+        if(si.tokenAmount > 0) {
+            IERC20(si.erc20Token).transferFrom(to, address(this), si.tokenAmount * _amount);
+        }
 
         _safeMint(to, _amount);
     }
@@ -197,6 +201,7 @@ contract CGCWhitelistERC721AV1 is ERC721A, Ownable, Pausable, ReentrancyGuard, I
         address to = _msgSender();
 
         if (si.merkleRoot == 0) revert WhitelistNotAvailable();
+        if (si.erc20Token == address(0)) revert WithERC20NotAvailable();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
         bytes32 leaf = keccak256(abi.encodePacked(_index, to, _maxAmount));
@@ -213,8 +218,9 @@ contract CGCWhitelistERC721AV1 is ERC721A, Ownable, Pausable, ReentrancyGuard, I
             _mintedAmounts[saleId] = saleMintedAmount + _amount;
         }
 
-        IERC20(si.erc20Token).transferFrom(to, address(this), si.tokenAmount * _amount);
-
+        if(si.tokenAmount > 0) {
+            IERC20(si.erc20Token).transferFrom(to, address(this), si.tokenAmount * _amount);
+        }
         _safeMint(to, _amount);
     }
 

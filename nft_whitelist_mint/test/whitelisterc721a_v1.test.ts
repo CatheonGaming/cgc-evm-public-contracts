@@ -804,7 +804,7 @@ describe("CGCWhitelistERC721AV1", function () {
 
         await expect(cgcWhitelistERC721AV1.connect(alice).publicSaleWithERC20(1)).to.be.revertedWithCustomError(
           cgcWhitelistERC721AV1,
-          "MintNotAvailable"
+          "WithERC20NotAvailable"
         );
       });
 
