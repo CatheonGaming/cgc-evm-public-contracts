@@ -15,6 +15,10 @@ The NFT contract having public/whitelist mint functionalities
     - mint by owner without fund
     - pause/unpause the minting by owner
     - set several phases of minting schedules
+  
+- CGCWhitelistERC721AV1
+  - Extends the CGCWhitelistERC721A smart contract
+  - added one additional functionality - minting with ERC20 token
 
 ## Usage
 
@@ -48,21 +52,40 @@ $ yarn test
 
 ### Deploy smart contract
 
-- Set params for deploying in `tasks/params.ts`
+- CGCWhitelistERC721A
+  - Set params for deploying in `tasks/params.ts`
 
-```
-export const NFT_NAME = "3000 KINGS NFT";          // NFT Collection Name
-export const NFT_SYMBOL = "3KN";            // NFT Collection Symbol
-export const MAX_SUPPLY = 3000;                 // MAX_SUPPLY of NFT COLLECTION
-export const URI_PREFIX = "https://ipfs.io/ipfs/QmZegrFAf9KXK6D4ZjMkq6uTmNuiN1ChJg6ecvgBKV8vWK/";   // BASE_URI
-```
+    ```
+    export const NFT_NAME = "3000 KINGS NFT";          // NFT Collection Name
+    export const NFT_SYMBOL = "3KN";            // NFT Collection Symbol
+    export const MAX_SUPPLY = 3000;                 // MAX_SUPPLY of NFT COLLECTION
+    export const URI_PREFIX = "https://ipfs.io/ipfs/QmZegrFAf9KXK6D4ZjMkq6uTmNuiN1ChJg6ecvgBKV8vWK/";   // BASE_URI
+    ```
 
-- Run command
+  - Run command
 
-```
-$ yarn deploy <TARGET_NETWORK>
-```
+    ```
+    $ yarn deploy <TARGET_NETWORK>
+    ```
 
+- CGCWhitelistERC721AV1
+  - Set params for deploying in `tasks/params_v1.ts`
+
+    ```
+    export const NFT_NAME = "3000 KINGS NFT";          // NFT Collection Name
+    export const NFT_SYMBOL = "3KN";            // NFT Collection Symbol
+    export const MAX_SUPPLY = 3000;                 // MAX_SUPPLY of NFT COLLECTION
+    export const URI_PREFIX = "https://ipfs.io/ipfs/QmZegrFAf9KXK6D4ZjMkq6uTmNuiN1ChJg6ecvgBKV8vWK/";   // BASE_URI
+    export const ERC20_TOKEN = ethers.constants.AddressZero; // ERC20 Token address (Not set - disabled minting with ERC20)
+    export const ERC20_AMOUNT = 0; // ERC20 Token amount
+    ```
+
+  - Run command
+
+    ```
+    $ yarn deploy:v1 <TARGET_NETWORK>
+    ```
+  
 - `<TARGET_NETWORK>`  
   You can set the target network name in the following.
   ```
@@ -74,8 +97,14 @@ $ yarn deploy <TARGET_NETWORK>
 
 ### Verify smart contract
 
+- CGCWhitelistERC721A
 ```
 $ yarn verify:CGCWhitelistERC721A <TARGET_NETWORK> --address <NFT_CONTRACT_ADDRESS>
+```
+
+- CGCWhitelistERC721AV1
+```
+$ yarn verify:CGCWhitelistERC721AV1 <TARGET_NETWORK> --address <NFT_CONTRACT_ADDRESS>
 ```
 
 ### Set new whitelist mint schedule
