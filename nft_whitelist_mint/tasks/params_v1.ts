@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 export const NFT_NAME = "Autoverse Game Beta Pass";
 export const NFT_SYMBOL = "AOTUVERSE";
 export const MAX_SUPPLY = 200;
-export const URI_PREFIX = "https://api.onigirimetaverse.com/nft/";
+export const URI_PREFIX = "https://ipfs.io/ipfs/QmXmZtkJNQRRc2YGCDUp3gsRXdG442VMDswbooaDyvS2Hx/";
 
 function getTimestampFromDate(date: Date) {
   return Math.floor(date.getTime() / 1000);

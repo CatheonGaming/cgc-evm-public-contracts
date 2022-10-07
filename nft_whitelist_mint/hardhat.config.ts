@@ -8,6 +8,8 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "./tasks/deploy";
 import "./tasks/commands";
+import "./tasks/deploy_v1";
+import "./tasks/commands_v1";
 
 dotenv.config();
 

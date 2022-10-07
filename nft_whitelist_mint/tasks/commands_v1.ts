@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 import { TaskArguments } from "hardhat/types";
 import { END_TIME, MINT_AMOUNT, MINT_PRICE, START_TIME, MAX_PER_USER, ERC20_TOKEN, ERC20_AMOUNT } from "./params_v1";
 
-task("set:PublicSale", "Set whitelist sale to CGCWhitelistERC721A contract")
+task("set:V1PublicSale", "Set whitelist sale to CGCWhitelistERC721A contract")
   .addParam("address", "The deployed smart contract address")
   .setAction(async function (taskArguments: TaskArguments, hre) {
     const cgcWhitelistERC721A = await hre.ethers.getContractAt("CGCWhitelistERC721AV1", taskArguments.address);
@@ -22,7 +22,7 @@ task("set:PublicSale", "Set whitelist sale to CGCWhitelistERC721A contract")
     console.log("Public sale was set by transaction:", tx.hash);
   });
 
-task("get:SaleId", "Set whitelist sale to CGCWhitelistERC721A contract")
+task("get:V1SaleId", "Set whitelist sale to CGCWhitelistERC721A contract")
   .addParam("address", "The deployed smart contract address")
   .setAction(async function (taskArguments: TaskArguments, hre) {
     const cgcWhitelistERC721A = await hre.ethers.getContractAt("CGCWhitelistERC721AV1", taskArguments.address);
@@ -33,7 +33,7 @@ task("get:SaleId", "Set whitelist sale to CGCWhitelistERC721A contract")
     console.log("SaleId:", saleId);
   });
 
-task("get:SaleInfo", "Set whitelist sale to CGCWhitelistERC721A contract")
+task("get:V1SaleInfo", "Set whitelist sale to CGCWhitelistERC721A contract")
   .addParam("address", "The deployed smart contract address")
   .addParam("saleid", "The sale index")
   .setAction(async function (taskArguments: TaskArguments, hre) {
