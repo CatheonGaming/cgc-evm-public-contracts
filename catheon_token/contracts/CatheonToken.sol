@@ -16,17 +16,17 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     // treasury address
     address private _treasury;
     // token-transfer fee percentage
-    uint16 private _feePercent;
+    uint256 private _feePercent;
     // mint flag
     bool private paused;
     // fee percentage division
-    uint16 private constant PERCENTAGE_DIVISION = 1000;
+    uint256 private constant PERCENTAGE_DIVISION = 1000;
 
-    event SetPaused(bool status);
-    event SetTreasury(address treasury);
-    event SetService(address service, bool enable);
-    event SetFeePercent(uint16 percentage);
-    event SetMaxSupply(uint256 supply);
+    event SetPaused(bool indexed status);
+    event SetTreasury(address indexed treasury);
+    event SetService(address indexed service, bool enable);
+    event SetFeePercent(uint256 indexed percentage);
+    event SetMaxSupply(uint256 indexed supply);
 
     /// @dev constructor
     /// prevent initialization of the implementation contract itself
@@ -138,7 +138,7 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
 
     /// @dev Set fee percentage by owner
     /// @param percentage Fee percentage
-    function setFee(uint16 percentage) external onlyOwner {
+    function setFee(uint256 percentage) external onlyOwner {
         require(percentage != 0 && percentage <= 900, "Invalid Fee Percentage");
         require(_feePercent != percentage, "Same Fee Percentage");
 
@@ -148,7 +148,7 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @dev get current fee percentage
-    function fee() external view returns (uint16) {
+    function fee() external view returns (uint256) {
         return _feePercent;
     }
 

@@ -9,6 +9,7 @@ Ownable, Upgradeable ERC20 contract.
 - Apply fee in token-transfer transactions between users excluding service addresses ( 90% >= fee percentage > 0%, default: 5%).
 - The fee should be transferred to treasury address.
 - Mint/Burn tokens by only owner at any time.
+- While burning tokens, the max supply of token will be not changed.
 - Only owner can change `fee_percentage`, `services`, `treasury`, `max_supply`.
 - Will not override `Ownable` functions because ownership can not be renounced.
 - If any address was registered as a service by owner, While the transactions related with this address being executed, the transaction fee will be not applied.
