@@ -7,6 +7,7 @@
     "compile": "hardhat compile",
     "coverage": "hardhat coverage --solcoverjs ./.solcover.js --temp build --network hardhat",
     "deploy": "hardhat deploy:CGCWhitelistERC721A --network",
+    "deploy:v1": "hardhat deploy:CGCWhitelistERC721AV1 --network",
     "generate-merkle-tree": "ts-node scripts/generate-merkle-whitelist.ts --input data/whitelist.json --output data/merkle_info.json",
     "lint": "yarn run lint:sol && yarn run lint:ts && yarn run prettier && yarn run prettier:list-different",
     "lint:sol": "yarn solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\" --fix",
@@ -16,7 +17,8 @@
     "test": "hardhat test --network hardhat",
     "typechain": "hardhat typechain",
     "verify-merkle-tree": "ts-node scripts/verify-merkle-whitelist.ts --input data/merkle_info.json",
-    "verify:CGCWhitelistERC721A": "hardhat verify:CGCWhitelistERC721A --network"
+    "verify:CGCWhitelistERC721A": "hardhat verify:CGCWhitelistERC721A --network",
+    "verify:CGCWhitelistERC721AV1": "hardhat verify:CGCWhitelistERC721AV1 --network"
   },
   "devDependencies": {
     "@ethersproject/abi": "5.6.0",

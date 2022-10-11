@@ -71,3 +71,26 @@ task("set:PublicSale3", "Set whitelist sale to CGCWhitelistERC721A contract")
 
     console.log("Public sale was set by transaction:", tx.hash);
   });
+
+task("get:SaleId", "Set whitelist sale to CGCWhitelistERC721A contract")
+  .addParam("address", "The deployed smart contract address")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+    const cgcWhitelistERC721A = await hre.ethers.getContractAt("CGCWhitelistERC721A", taskArguments.address);
+
+    // Deploy Contract
+    const saleId = await cgcWhitelistERC721A.saleId();
+
+    console.log("SaleId:", saleId);
+  });
+
+task("get:SaleInfo", "Set whitelist sale to CGCWhitelistERC721A contract")
+  .addParam("address", "The deployed smart contract address")
+  .addParam("saleid", "The sale index")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+    const cgcWhitelistERC721A = await hre.ethers.getContractAt("CGCWhitelistERC721A", taskArguments.address);
+
+    // Deploy Contract
+    const saleInfo = await cgcWhitelistERC721A.saleInfo(taskArguments.saleid);
+
+    console.log("saleInfo:", saleInfo);
+  });

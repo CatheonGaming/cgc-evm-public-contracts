@@ -6,12 +6,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "./interfaces/IPhaseSalable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IPhaseSalableV1.sol";
 
 /// @title Whitelist Mint ERC721A NFT Contract
-/// @dev Several phases of public/whitelist mint
+/// @dev Several phases of public/whitelist mint, minting with ERC20 token
 /// @author Seiji Ito
-contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPhaseSalable {
+contract CGCWhitelistERC721AV1 is ERC721A, Ownable, Pausable, ReentrancyGuard, IPhaseSalableV1 {
     // Token URI Prefix
     string public uriPrefix = "";
     // Token Max Supply
@@ -40,10 +41,12 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     error PublicSaleMaxUserSupply();
     error ScheduleOngoing();
     error NoDepositedETH();
+    error NoDepositedERC20();
     error InvalidSale();
     error InvalidMerkleRoot();
     error InvalidMintTime();
     error InvalidMaxSupply();
+    error WithERC20NotAvailable();
 
     // ******************  Events  *****************************
 
@@ -78,7 +81,7 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
 
     /// @dev Get CGC Mint Contract Version
     function getVersionCode() external override pure returns (uint8) {
-        return 0;
+        return 1;
     }
 
     /// @dev Get the next token Id of minting
@@ -107,13 +110,15 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         if (msg.value < si.mintPrice * _amount) revert MintInsufficientFund();
         if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
 
-        if (si.maxPerUser > 0 && _amount + _accountMintedAmounts[saleId][to] > si.maxPerUser)
-            revert PublicSaleMaxUserSupply();
-        if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert PublicSaleMaxSupply();
+        uint256 accountMintedAmount = _accountMintedAmounts[saleId][to];
+        if (si.maxPerUser > 0 && _amount + accountMintedAmount > si.maxPerUser) revert PublicSaleMaxUserSupply();
+
+        uint256 saleMintedAmount = _mintedAmounts[saleId];
+        if (si.mintAmount > 0 && _amount + saleMintedAmount > si.mintAmount) revert PublicSaleMaxSupply();
 
         unchecked {
-            _accountMintedAmounts[saleId][to] += _amount;
-            _mintedAmounts[saleId] += _amount;
+            _accountMintedAmounts[saleId][to] = accountMintedAmount + _amount;
+            _mintedAmounts[saleId] = saleMintedAmount + _amount;
         }
 
         _safeMint(to, _amount);
@@ -139,16 +144,84 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         bytes32 leaf = keccak256(abi.encodePacked(_index, _msgSender(), _maxAmount));
         if (!MerkleProof.verify(_proof, si.merkleRoot, leaf)) revert InvalidSale();
 
-        if (_maxAmount > 0 && _amount + _accountMintedAmounts[saleId][_msgSender()] > _maxAmount)
-            revert WhitelistSaleMaxUserSupply();
-        if (si.mintAmount > 0 && _amount + _mintedAmounts[saleId] > si.mintAmount) revert WhitelistSaleMaxSupply();
+        uint256 accountMintedAmount = _accountMintedAmounts[saleId][_msgSender()];
+        if (_maxAmount > 0 && _amount + accountMintedAmount > _maxAmount) revert WhitelistSaleMaxUserSupply();
+
+        uint256 saleMintedAmount = _mintedAmounts[saleId];
+        if (si.mintAmount > 0 && _amount + saleMintedAmount > si.mintAmount) revert WhitelistSaleMaxSupply();
 
         unchecked {
-            _accountMintedAmounts[saleId][_msgSender()] += _amount;
-            _mintedAmounts[saleId] += _amount;
+            _accountMintedAmounts[saleId][_msgSender()] = accountMintedAmount + _amount;
+            _mintedAmounts[saleId] = saleMintedAmount + _amount;
         }
 
         _safeMint(_msgSender(), _amount);
+    }
+
+    /// @dev public mint
+    /// @param _amount The number of minting NFTs
+    function publicSaleWithERC20(uint256 _amount) external override whenNotPaused nonReentrant mintCompliance(_amount) {
+        SaleInfo memory si = _saleInfos[saleId];
+        address to = _msgSender();
+
+        if (si.merkleRoot != 0) revert PublicSaleNotAvailable();
+        if (si.erc20Token == address(0)) revert WithERC20NotAvailable();
+        if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
+
+        uint256 accountMintedAmount = _accountMintedAmounts[saleId][to];
+        if (si.maxPerUser > 0 && _amount + accountMintedAmount > si.maxPerUser) revert PublicSaleMaxUserSupply();
+
+        uint256 saleMintedAmount = _mintedAmounts[saleId];
+        if (si.mintAmount > 0 && _amount + saleMintedAmount > si.mintAmount) revert PublicSaleMaxSupply();
+
+        unchecked {
+            _accountMintedAmounts[saleId][to] = accountMintedAmount + _amount;
+            _mintedAmounts[saleId] = saleMintedAmount + _amount;
+        }
+
+        if(si.tokenAmount > 0) {
+            IERC20(si.erc20Token).transferFrom(to, address(this), si.tokenAmount * _amount);
+        }
+
+        _safeMint(to, _amount);
+    }
+
+    /// @dev whitelist mint
+    /// @param _index The index of account`s leaf on merkle whitelist
+    /// @param _proof The proofs of account`s leaf on merkle whitelist
+    /// @param _maxAmount The mint max amount of account on merkle whitelist
+    /// @param _amount The number of minting NFTs
+    function whitelistSaleWithERC20(
+        uint256 _index,
+        bytes32[] calldata _proof,
+        uint256 _maxAmount,
+        uint256 _amount
+    ) external override whenNotPaused nonReentrant mintCompliance(_amount) {
+        SaleInfo memory si = _saleInfos[saleId];
+        address to = _msgSender();
+
+        if (si.merkleRoot == 0) revert WhitelistNotAvailable();
+        if (si.erc20Token == address(0)) revert WithERC20NotAvailable();
+        if (block.timestamp < si.mintStartTime || block.timestamp > si.mintEndTime) revert MintNotAvailable();
+
+        bytes32 leaf = keccak256(abi.encodePacked(_index, to, _maxAmount));
+        if (!MerkleProof.verify(_proof, si.merkleRoot, leaf)) revert InvalidSale();
+
+        uint256 accountMintedAmount = _accountMintedAmounts[saleId][to];
+        if (_maxAmount > 0 && _amount + accountMintedAmount > _maxAmount) revert WhitelistSaleMaxUserSupply();
+
+        uint256 saleMintedAmount = _mintedAmounts[saleId];
+        if (si.mintAmount > 0 && _amount + saleMintedAmount > si.mintAmount) revert WhitelistSaleMaxSupply();
+
+        unchecked {
+            _accountMintedAmounts[saleId][to] = accountMintedAmount + _amount;
+            _mintedAmounts[saleId] = saleMintedAmount + _amount;
+        }
+
+        if(si.tokenAmount > 0) {
+            IERC20(si.erc20Token).transferFrom(to, address(this), si.tokenAmount * _amount);
+        }
+        _safeMint(to, _amount);
     }
 
     /// @dev Mint function for owner that allows for free minting for a specified address
@@ -182,12 +255,16 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     /// @param _mintEndTime The end time of minting
     /// @param _mintPrice The mint price (ETH)
     /// @param _mintAmount The mint amount
+    /// @param _mintERC20Token The token address for minting
+    /// @param _mintTokenAmount The token amount for minting
     function setupWhitelistSale(
         bytes32 _merkleRoot,
         uint256 _mintStartTime,
         uint256 _mintEndTime,
         uint256 _mintPrice,
-        uint256 _mintAmount
+        uint256 _mintAmount,
+        address _mintERC20Token,
+        uint256 _mintTokenAmount
     ) external override onlyOwner {
         if (_merkleRoot == 0) revert InvalidMerkleRoot();
         if (_mintStartTime < block.timestamp || _mintEndTime <= _mintStartTime) revert InvalidMintTime();
@@ -199,6 +276,8 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         si.mintEndTime = _mintEndTime;
         si.mintPrice = _mintPrice;
         si.mintAmount = _mintAmount;
+        si.erc20Token = _mintERC20Token;
+        si.tokenAmount = _mintTokenAmount;
 
         emit SetupSaleInfo(saleId, si);
     }
@@ -208,13 +287,17 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
     /// @param _mintEndTime The end time of minting
     /// @param _mintPrice The mint price (ETH)
     /// @param _mintAmount The mint amount
-    /// @param _maxPerUser The
+    /// @param _maxPerUser The maximum amount of minting per user
+    /// @param _mintERC20Token The token address for minting
+    /// @param _mintTokenAmount The token amount for minting
     function setupPublicSale(
         uint256 _mintStartTime,
         uint256 _mintEndTime,
         uint256 _mintPrice,
         uint256 _mintAmount,
-        uint256 _maxPerUser
+        uint256 _maxPerUser,
+        address _mintERC20Token,
+        uint256 _mintTokenAmount
     ) external override onlyOwner {
         if (_mintStartTime < block.timestamp || _mintEndTime <= _mintStartTime) revert InvalidMintTime();
 
@@ -225,6 +308,8 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
         si.mintPrice = _mintPrice;
         si.mintAmount = _mintAmount;
         si.maxPerUser = _maxPerUser;
+        si.erc20Token = _mintERC20Token;
+        si.tokenAmount = _mintTokenAmount;
 
         emit SetupSaleInfo(saleId, si);
     }
@@ -237,7 +322,19 @@ contract CGCWhitelistERC721A is ERC721A, Ownable, Pausable, ReentrancyGuard, IPh
 
         payable(_to).transfer(_depositedEth);
 
-        emit Withdrew(_depositedEth);
+        emit Withdrew(_to, _depositedEth);
+    }
+
+
+    /// @dev withdraw ETH by owner
+    /// @param _to target address
+    function withdrawERC20(address _token, address _to) external override nonReentrant onlyOwner {
+        uint256 _depositedToken = IERC20(_token).balanceOf(address(this));
+        if (_depositedToken == 0) revert NoDepositedERC20();
+
+        IERC20(_token).transfer(_to, _depositedToken);
+
+        emit WithdrewERC20(_to, _depositedToken);
     }
 
     // the starting tokenId
