@@ -41,12 +41,24 @@ task("verify:CGCWhitelistERC721AV1", "Very CGCWhitelistERC721AV1 Smart Contract"
     console.log("CGCWhitelistERC721AV1 verified successfully");
   });
 
+task("transferOwnershipV1", "Deploy CGCWhitelistERC721AV1 Smart Contract")
+  .addParam("address", "The deployed smart contract address")
+  .addParam("to", "The deployed smart contract address")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+    const cgcWhitelistERC721A = await hre.ethers.getContractAt("CGCWhitelistERC721AV1", taskArguments.address);
+
+    // Deploy Contract
+    const tx = await cgcWhitelistERC721A.transferOwnership(taskArguments.to);
+    await tx.wait();
+
+    console.log("CGCWhitelistERC721AV1 ownership was transferred to:", tx.hash);
+  });
+
 // Deploy and set Schedule for all collections
 task("deploy:ALLCGCWhitelistERC721AV1", "Deploy CGCWhitelistERC721AV1 Smart Contract")
   .addParam("idx", "The index of collection", -1, types.int, true)
   .setAction(async function (taskArguments: TaskArguments, hre) {
     for (let i = 0; i < collections.length; i++) {
-      console.log("i", i, taskArguments.idx);
       if (taskArguments.idx > -1 && i !== taskArguments.idx) {
         continue;
       }
