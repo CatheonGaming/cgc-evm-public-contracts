@@ -92,6 +92,9 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
             services[recipient] != true &&
             recipient != treasuryAddress
         ) {
+            // fee avoidance
+            require(amount >= PERCENTAGE_DIVISION, "Too small transfer");
+
             uint256 feeAmount = (amount * _feePercent) / PERCENTAGE_DIVISION;
             receiveAmount = amount - feeAmount;
 
