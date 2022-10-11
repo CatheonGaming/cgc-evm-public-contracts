@@ -28,13 +28,20 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     event SetFeePercent(uint16 percentage);
     event SetMaxSupply(uint256 supply);
 
+    /// @dev constructor
+    /// @param name_ Token name
+    /// @param symbol_ Token symbol
+    /// @param initialBalance_ Initial token balance of deployer
+    /// @param treasury_ Treasury address receiving fee
     function initialize(
         string memory name_,
         string memory symbol_,
         uint256 initialBalance_,
         address treasury_
     ) public initializer {
-        require(initialBalance_ > 0, "Initial Supply Zero");
+        require(name_.length > 0, "Empty Name");
+        require(symbol_.length > 2 && symbol_.length < 12, "Invalid symbol");
+        require(initialBalance_ <= 1e19 && initialBalance_ > 0, "Invalid initial balance");
         require(treasury_ != address(0), "Zero Treasury Address");
 
         _treasury = treasury_;
