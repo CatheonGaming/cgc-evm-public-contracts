@@ -29,6 +29,13 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     event SetMaxSupply(uint256 supply);
 
     /// @dev constructor
+    /// prevent initialization of the implementation contract itself
+    /// prevent an attacker from initializing it
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @dev initialize for upgradeable
     /// @param name_ Token name
     /// @param symbol_ Token symbol
     /// @param initialBalance_ Initial token balance of deployer
