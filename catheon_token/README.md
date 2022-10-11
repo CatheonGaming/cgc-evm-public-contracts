@@ -5,6 +5,7 @@ Ownable, Upgradeable ERC20 contract.
 
 ## Requirement
 - Initial max supply (10 billion).
+- Token decimals (9)
 - Apply fee in token-transfer transactions between users excluding service addresses ( 90% >= fee percentage > 0%, default: 5%).
 - The fee should be transferred to treasury address.
 - Mint/Burn tokens by only owner at any time.
