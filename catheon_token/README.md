@@ -7,9 +7,11 @@ Ownable, Upgradeable ERC20 contract.
 - Initial max supply (10 billion).
 - Apply fee in token-transfer transactions between users excluding service addresses ( 90% >= fee percentage > 0%, default: 5%).
 - The fee should be transferred to treasury address.
-- Mint/Burn tokens by only owner.
+- Mint/Burn tokens by only owner at any time.
 - Only owner can change `fee_percentage`, `services`, `treasury`, `max_supply`.
 - Will not override `Ownable` functions because ownership can not be renounced.
+- If any address was registered as a service by owner, While the transactions related with this address being executed, the transaction fee will be not applied.
+  (For CGC, we are going to set the services with the CGC treasury addresses such as Catheon-Bridge pool, GameToken-Exchange pool, CGC-Marketplace contract...)
 
 ## Implement
 > Language: Solidity  
