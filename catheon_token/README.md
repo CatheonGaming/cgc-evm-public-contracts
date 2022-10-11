@@ -9,6 +9,7 @@ Ownable, Upgradeable ERC20 contract.
 - The fee should be transferred to treasury address.
 - Mint/Burn tokens by only owner.
 - Only owner can change `fee_percentage`, `services`, `treasury`, `max_supply`.
+- Will not override `Ownable` functions because ownership can not be renounced.
 
 ## Implement
 > Language: Solidity  

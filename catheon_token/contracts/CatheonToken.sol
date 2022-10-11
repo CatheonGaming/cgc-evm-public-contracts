@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /// Catheon token
 /// @dev The ownable, upgradeable ERC20 contract
+/// - Will not override Ownable functions to checking ownership (Ownership can not be renounced)
 contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     // service addresses
     mapping(address => bool) public services;
