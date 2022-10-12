@@ -20,6 +20,7 @@ Ownable, Upgradeable ERC20 contract.
 ## Caution
 - Should not override `Ownable` functions because ownership can not be renounced.
 - If fee-applied-address list has the address of DEX pool, Lending pool, .., you can face some problems in something like as slippage. So before setting fee-applying-address, you should confirm some problems about fee on target address.
+- Recommended that you should use the smart contract`s owner as a multi-sig wallet same as Gnosis safe.
 
 ## Implement
 > Language: Solidity  
@@ -60,15 +61,15 @@ $ yarn test
 - Configuration  
   Set token's name and symbol, initial_supply, treasury in `scripts/params.ts` file
 
-```shell
-export const TOKEN_NAME = "CATHEON TOKEN";
-export const TOKEN_SYMBOL = "CATHEON";
-export const INITIAL_SUPPLY = 1000_000_000;
-export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";
-```
+  ```shell
+  export const TOKEN_NAME = "CATHEON TOKEN";
+  export const TOKEN_SYMBOL = "CATHEON";
+  export const INITIAL_SUPPLY = 1000_000_000;
+  export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";
+  ```
 
 - Deploy Token Contract on Polygon
 
-```shell
-$ yarn deploy --network polygon
-```
+  ```shell
+  $ yarn deploy --network polygon
+  ```
