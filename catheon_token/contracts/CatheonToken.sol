@@ -27,7 +27,7 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     /// @dev Emitted when owner change treasury address
     event SetTreasury(address indexed treasury);
     /// @dev Emitted when owner set whether the address is applying fee or not
-    event SetFeeApplyingAddress(address indexed service, bool enable);
+    event SetFeeApplyingAddress(address indexed target, bool isApplying);
     /// @dev Emitted when owner change fee percentage
     event SetFeePercent(uint256 indexed percentage);
     /// @dev Emitted when owner set max-supply
@@ -70,7 +70,7 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         __Ownable_init();
     }
 
-    /// @dev Mint token by owner
+    /// @dev Mint token by owner at any time
     /// @param account Target address
     /// @param amount Mint amount
     function mint(address account, uint256 amount) external onlyOwner {
@@ -128,13 +128,13 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
 
     /// @dev Set whether the address is applying fee or not
     /// @param applyingAddr Target address
-    /// @param enable Flag (true: set, false: unset)
-    function setFeeApplyingAddr(address applyingAddr, bool enable) external onlyOwner {
-        require(feeApplies[applyingAddr] != enable, "Already Set");
+    /// @param isApplying Flag (true: apply fee, false: don't apply fee)
+    function setFeeApplyingAddr(address applyingAddr, bool isApplying) external onlyOwner {
+        require(feeApplies[applyingAddr] != isApplying, "Already Set");
 
-        feeApplies[applyingAddr] = enable;
+        feeApplies[applyingAddr] = isApplying;
 
-        emit SetFeeApplyingAddress(applyingAddr, enable);
+        emit SetFeeApplyingAddress(applyingAddr, isApplying);
     }
 
     /// @dev Set fee percentage by owner
@@ -181,7 +181,7 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         emit SetMaxSupply(supply);
     }
 
-    /// @dev Burn token by owner
+    /// @dev Burn token by owner at any time
     /// @param amount Burning token amount
     function burn(uint256 amount) external onlyOwner {
         _burn(_msgSender(), amount);
