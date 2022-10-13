@@ -21,6 +21,10 @@ Ownable, Upgradeable ERC20 contract.
 - If fee-applied-address list has the address of DEX pool, Lending pool, .., you can face some problems in something like as slippage. So before setting fee-applying-address, you should confirm some problems about fee on target address.
 - Recommended that you should use the smart contract`s owner as a multi-sig wallet same as Gnosis safe.
 
+## Upgradeability
+- This token contract is the upgradeable contract. We can upgrade token contract for some reasons like as applying fee. 
+- We will provide upgraded version with updated audit document. 
+
 ## Implement
 > Language: Solidity  
 > Framework: Hardhat  
