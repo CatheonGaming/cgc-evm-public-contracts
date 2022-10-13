@@ -8,10 +8,9 @@ Ownable, Upgradeable ERC20 contract.
 - Token decimals (9)
 - While deploying, Deployer will own the tokens equals of Initial balance
 - Fee
-  - The fee will be applied upon token-transfer transactions between addresses excluding service addresses ( 90% >= fee percentage > 0%, default: 5%).
+  - The fee will be applied upon token-transfer transactions between the addresses including the fee-applying-addresses ( 90% >= fee percentage > 0%, default: 5%).
   - The transfers from/to the treasury address will be not applied fee.
-  - If any address was registered as a service by owner, While the transactions related with this address being executed, the transaction fee will be not applied.
-    (For CGC, we are going to set the services with the CGC treasury addresses such as Catheon-Bridge pool, GameToken-Exchange pool, CGC-Marketplace contract...)
+  - If any address was registered as a fee-applying-address by owner, While the transactions related with this address being executed, the transaction fee will be applied.
   - The fee should be transferred to treasury address.
 - Mint/Burn tokens by only owner at any time.
 - While burning tokens, the max supply of token will be not changed.
