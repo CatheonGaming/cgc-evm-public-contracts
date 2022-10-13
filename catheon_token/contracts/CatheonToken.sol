@@ -52,7 +52,10 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     ) public initializer {
         require(bytes(name_).length > 0, "Empty Name");
         require(bytes(symbol_).length > 2, "Invalid symbol: min 3 letters");
-        require(initialBalance_ <= 1e19 && initialBalance_ > 0, "Invalid initial balance");
+        require(
+            initialBalance_ <= 1e19 && initialBalance_ > 0,
+            "Invalid initial balance"
+        );
         require(treasury_ != address(0), "Zero Treasury Address");
 
         _treasury = treasury_;
@@ -129,7 +132,10 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     /// @dev Set whether the address is applying fee or not
     /// @param applyingAddr Target address
     /// @param isApplying Flag (true: apply fee, false: don't apply fee)
-    function setFeeApplyingAddr(address applyingAddr, bool isApplying) external onlyOwner {
+    function setFeeApplyingAddr(address applyingAddr, bool isApplying)
+        external
+        onlyOwner
+    {
         require(feeApplies[applyingAddr] != isApplying, "Already Set");
 
         feeApplies[applyingAddr] = isApplying;
@@ -140,7 +146,10 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     /// @dev Set fee percentage by owner
     /// @param percentage Fee percentage
     function setFee(uint256 percentage) external onlyOwner {
-        require(percentage != PERCENTAGE_ZERO && percentage <= MAX_FEE_PERCENTAGE, "Invalid Fee Percentage");
+        require(
+            percentage != PERCENTAGE_ZERO && percentage <= MAX_FEE_PERCENTAGE,
+            "Invalid Fee Percentage"
+        );
         require(_feePercent != percentage, "Same Fee Percentage");
 
         _feePercent = percentage;

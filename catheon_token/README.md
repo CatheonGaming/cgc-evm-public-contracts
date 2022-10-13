@@ -1,9 +1,11 @@
 # Catheon Token
 
 ## About
+
 Ownable, Upgradeable ERC20 contract.
 
 ## Requirement
+
 - Initial max supply (10 billion).
 - Token decimals (9)
 - While deploying, Deployer will own the tokens equals of Initial balance
@@ -17,21 +19,25 @@ Ownable, Upgradeable ERC20 contract.
 - Only owner can change `fee_percentage`, `feeApplies`, `treasury`, `max_supply`.
 
 ## Caution
+
 - Should not override `Ownable` functions because ownership can not be renounced.
 - If fee-applied-address list has the address of DEX pool, Lending pool, .., you can face some problems in something like as slippage. So before setting fee-applying-address, you should confirm some problems about fee on target address.
 - Recommended that you should use the smart contract`s owner as a multi-sig wallet same as Gnosis safe.
 
 ## Upgradeability
-- This token contract is the upgradeable contract. We can upgrade token contract for some reasons like as applying fee. 
-- We will provide upgraded version with updated audit document. 
+
+- This token contract is the upgradeable contract. We can upgrade token contract for some reasons like as applying fee.
+- We will provide upgraded version with updated audit document.
 
 ## Implement
+
 > Language: Solidity  
 > Framework: Hardhat  
 > Networks: Polygon, Ethereum, BSC  
 > Unit Test: Hardhat, Chai
 
 ## Installation
+
 ```shell
 $ yarn install
 ```
@@ -39,7 +45,9 @@ $ yarn install
 ## Usage
 
 #### 1. Environment variables
+
 - Create a `.env` file and set environment variables (refer `.env.sample` file)
+
 ```
 INFURA_API_KEY=[INFURA_API_KEY]
 ADMIN_KEY=[DEPLOYER_PRIVATE_KEY]
@@ -48,13 +56,17 @@ REPORT_GAS=<true_or_false>
 ```
 
 #### 2. Build token contract
+
 Build Smart Contract
+
 ```shell
 $ yarn compile
 ```
 
 #### 3. Test
+
 Unit Test of Smart Contract
+
 ```shell
 $ yarn test
 ```
