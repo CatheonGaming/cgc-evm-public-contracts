@@ -5,10 +5,21 @@ Ownable, Upgradeable ERC20 contract.
 
 ## Requirement
 - Initial max supply (10 billion).
-- Apply fee in token-transfer transactions between users excluding service addresses ( 90% >= fee percentage > 0%, default: 5%).
-- The fee should be transferred to treasury address.
-- Mint/Burn tokens by only owner.
-- Only owner can change `fee_percentage`, `services`, `treasury`, `max_supply`.
+- Token decimals (9)
+- While deploying, Deployer will own the tokens equals of Initial balance
+- Fee
+  - The fee will be applied upon token-transfer transactions between the addresses including the fee-applying-addresses ( 90% >= fee percentage > 0%, default: 5%).
+  - The transfers from/to the treasury address will be not applied fee.
+  - If any address was registered as a fee-applying-address by owner, While the transactions related with this address being executed, the transaction fee will be applied.
+  - The fee should be transferred to treasury address.
+- Mint/Burn tokens by only owner at any time.
+- While burning tokens, the max supply of token will be not changed.
+- Only owner can change `fee_percentage`, `feeApplies`, `treasury`, `max_supply`.
+
+## Caution
+- Should not override `Ownable` functions because ownership can not be renounced.
+- If fee-applied-address list has the address of DEX pool, Lending pool, .., you can face some problems in something like as slippage. So before setting fee-applying-address, you should confirm some problems about fee on target address.
+- Recommended that you should use the smart contract`s owner as a multi-sig wallet same as Gnosis safe.
 
 ## Implement
 > Language: Solidity  
@@ -49,15 +60,15 @@ $ yarn test
 - Configuration  
   Set token's name and symbol, initial_supply, treasury in `scripts/params.ts` file
 
-```shell
-export const TOKEN_NAME = "CATHEON TOKEN";
-export const TOKEN_SYMBOL = "CATHEON";
-export const INITIAL_SUPPLY = 1000_000_000;
-export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";
-```
+  ```shell
+  export const TOKEN_NAME = "CATHEON TOKEN";
+  export const TOKEN_SYMBOL = "CATHEON";
+  export const INITIAL_SUPPLY = 1000_000_000;
+  export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";
+  ```
 
 - Deploy Token Contract on Polygon
 
-```shell
-$ yarn deploy --network polygon
-```
+  ```shell
+  $ yarn deploy --network polygon
+  ```

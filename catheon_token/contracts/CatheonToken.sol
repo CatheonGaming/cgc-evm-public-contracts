@@ -7,37 +7,55 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /// Catheon token
 /// @dev The ownable, upgradeable ERC20 contract
+/// @notice Do not override Ownable functions to checking ownership (Ownership can not be renounced)
 contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
-    // service addresses
-    mapping(address => bool) public services;
+    // addresses applying fee (address => isApplyingFee)
+    mapping(address => bool) public feeApplies;
     // max total supply limit 10_000_000_000 * DECIMAL
     uint256 public maxSupply;
     // treasury address
     address private _treasury;
     // token-transfer fee percentage
-    uint16 private _feePercent;
-    // mint flag
-    bool private paused;
+    uint256 private _feePercent;
     // fee percentage division
-    uint16 private constant PERCENTAGE_DIVISION = 1000;
+    uint256 private constant PERCENTAGE_DIVISION = 1000;
+    // 0%
+    uint256 private constant PERCENTAGE_ZERO = 0;
+    // max fee percentage (90%)
+    uint256 private constant MAX_FEE_PERCENTAGE = 900;
 
-    event SetPaused(bool status);
-    event SetTreasury(address treasury);
-    event SetService(address service, bool enable);
-    event SetFeePercent(uint16 percentage);
-    event SetMaxSupply(uint256 supply);
+    /// @dev Emitted when owner change treasury address
+    event SetTreasury(address indexed treasury);
+    /// @dev Emitted when owner set whether the address is applying fee or not
+    event SetFeeApplyingAddress(address indexed target, bool isApplying);
+    /// @dev Emitted when owner change fee percentage
+    event SetFeePercent(uint256 indexed percentage);
+    /// @dev Emitted when owner set max-supply
+    event SetMaxSupply(uint256 indexed supply);
 
+    /// @dev Prevent initialization of the implementation contract itself and prevent an attacker from initializing it
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @dev Initialize for upgradeable
+    /// @param name_ Token name
+    /// @param symbol_ Token symbol
+    /// @param initialBalance_ Initial token balance of deployer
+    /// @param treasury_ Treasury address receiving fee
     function initialize(
         string memory name_,
         string memory symbol_,
         uint256 initialBalance_,
         address treasury_
     ) public initializer {
-        require(initialBalance_ > 0, "Initial Supply Zero");
+        require(bytes(name_).length > 0, "Empty Name");
+        require(bytes(symbol_).length > 2, "Invalid symbol: min 3 letters");
+        require(initialBalance_ <= 1e19 && initialBalance_ > 0, "Invalid initial balance");
         require(treasury_ != address(0), "Zero Treasury Address");
 
         _treasury = treasury_;
-        services[msg.sender] = true;
 
         /// default max supply 10_000_000_000 * (10 ** decimals)
         maxSupply = 1e19;
@@ -52,21 +70,20 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         __Ownable_init();
     }
 
-    /// @dev mint token by owner
+    /// @dev Mint token by owner at any time
     /// @param account Target address
     /// @param amount Mint amount
     function mint(address account, uint256 amount) external onlyOwner {
-        require(!paused, "Mint Unavailable");
-
         _mint(account, amount);
     }
 
-    /// @dev token decimals
+    /// @dev Return the number of decimals
+    /// @return Token decimals
     function decimals() public pure override returns (uint8) {
         return 9;
     }
 
-    /// @dev internal transfer token
+    /// @dev Internal transfer token
     /// @param sender From address
     /// @param recipient To address
     /// @param amount Token amount
@@ -79,11 +96,13 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         address treasuryAddress = _treasury;
 
         if (
-            services[sender] != true &&
             sender != treasuryAddress &&
-            services[recipient] != true &&
-            recipient != treasuryAddress
+            recipient != treasuryAddress &&
+            (feeApplies[sender] == true || feeApplies[recipient] == true)
         ) {
+            // fee avoidance
+            require(amount >= PERCENTAGE_DIVISION, "Too small transfer");
+
             uint256 feeAmount = (amount * _feePercent) / PERCENTAGE_DIVISION;
             receiveAmount = amount - feeAmount;
 
@@ -107,21 +126,21 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         emit SetTreasury(to);
     }
 
-    /// @dev Set service address by owner
-    /// @param service Service address
-    /// @param enable Flag (true: set, false: unset)
-    function setService(address service, bool enable) external onlyOwner {
-        require(services[service] != enable, "Already Set");
+    /// @dev Set whether the address is applying fee or not
+    /// @param applyingAddr Target address
+    /// @param isApplying Flag (true: apply fee, false: don't apply fee)
+    function setFeeApplyingAddr(address applyingAddr, bool isApplying) external onlyOwner {
+        require(feeApplies[applyingAddr] != isApplying, "Already Set");
 
-        services[service] = enable;
+        feeApplies[applyingAddr] = isApplying;
 
-        emit SetService(service, enable);
+        emit SetFeeApplyingAddress(applyingAddr, isApplying);
     }
 
     /// @dev Set fee percentage by owner
     /// @param percentage Fee percentage
-    function setFee(uint16 percentage) external onlyOwner {
-        require(percentage != 0 && percentage <= 900, "Invalid Fee Percentage");
+    function setFee(uint256 percentage) external onlyOwner {
+        require(percentage != PERCENTAGE_ZERO && percentage <= MAX_FEE_PERCENTAGE, "Invalid Fee Percentage");
         require(_feePercent != percentage, "Same Fee Percentage");
 
         _feePercent = percentage;
@@ -129,35 +148,22 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         emit SetFeePercent(percentage);
     }
 
-    /// @dev get current fee percentage
-    function fee() external view returns (uint16) {
+    /// @dev Get current fee percentage
+    /// @return Fee percentage
+    function fee() external view returns (uint256) {
         return _feePercent;
     }
 
-    /// @dev get current treasury address
+    /// @dev Get current treasury address
+    /// @return Treasury address
     function treasury() external view returns (address) {
         return _treasury;
     }
 
-    /// @dev get the status whether token can be minted or not.
-    function isPaused() external view returns (bool) {
-        return paused;
-    }
-
-    /// @dev Set pause flag of minting by owner
-    /// @param to Paused flag (true: pause minting, false: unpause)
-    function setPaused(bool to) external onlyOwner {
-        require(paused != to, "Same Status");
-
-        paused = to;
-        emit SetPaused(to);
-    }
-
-    /// @dev override ERC20`s _mint function for adding max_total_supply limit validation
+    /// @dev Override ERC20`s _mint function for adding max_total_supply limit validation
     /// @param account The target address minting tokens
     /// @param amount The minting token amount
     function _mint(address account, uint256 amount) internal override {
-        // if s_mintingFinished is set, check total supply limit
         uint256 _totalSupply = totalSupply();
         require(_totalSupply + amount <= maxSupply, "Limited By Max Supply");
 
@@ -175,7 +181,7 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         emit SetMaxSupply(supply);
     }
 
-    /// @dev Burn token by owner
+    /// @dev Burn token by owner at any time
     /// @param amount Burning token amount
     function burn(uint256 amount) external onlyOwner {
         _burn(_msgSender(), amount);
