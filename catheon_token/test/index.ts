@@ -34,11 +34,27 @@ describe("Catheon Token Unit Tests", function () {
     await catheonToken.deployed();
   });
 
-  it("1. Token can not deploy with zero-initial_supply or zero-treasury_address", async function () {
+  it("1. Token can not deploy with invalid params", async function () {
     const CatheonTokenFactory = await ethers.getContractFactory(
       "CatheonToken",
       owner
     );
+    await expect(
+      upgrades.deployProxy(CatheonTokenFactory, [
+        "",
+        TOKEN_SYMBOL,
+        parseWithDecimals(INITIAL_SUPPLY, 9),
+        treasury.address,
+      ])
+    ).revertedWith("Empty Name");
+    await expect(
+      upgrades.deployProxy(CatheonTokenFactory, [
+        TOKEN_NAME,
+        "",
+        parseWithDecimals(INITIAL_SUPPLY, 9),
+        treasury.address,
+      ])
+    ).revertedWith("Invalid symbol: min 3 letters");
     await expect(
       upgrades.deployProxy(CatheonTokenFactory, [
         TOKEN_NAME,
@@ -46,7 +62,7 @@ describe("Catheon Token Unit Tests", function () {
         0,
         treasury.address,
       ])
-    ).revertedWith("Initial Supply Zero");
+    ).revertedWith("Invalid initial balance");
     await expect(
       upgrades.deployProxy(CatheonTokenFactory, [
         TOKEN_NAME,
@@ -111,23 +127,25 @@ describe("Catheon Token Unit Tests", function () {
     });
   });
 
-  describe("4. Set service address", async function () {
-    it("4.1 The service address can be set by only owner", async function () {
+  describe("4. Set the address as fee-applying-address", async function () {
+    it("4.1 The special address can be set as fee-applying-address by only owner", async function () {
       await expect(
-        catheonToken.connect(alice).setService(eve.address, true)
+        catheonToken.connect(alice).setFeeApplyingAddr(eve.address, true)
       ).revertedWith("Ownable: caller is not the owner");
 
-      await expect(catheonToken.connect(owner).setService(eve.address, true))
-        .to.emit(catheonToken, "SetService")
+      await expect(
+        catheonToken.connect(owner).setFeeApplyingAddr(eve.address, true)
+      )
+        .to.emit(catheonToken, "SetFeeApplyingAddress")
         .withArgs(eve.address, true);
 
-      expect(await catheonToken.services(eve.address)).to.eq(true);
+      expect(await catheonToken.feeApplies(eve.address)).to.eq(true);
     });
 
     it("4.2 The service address can not be set as origin value", async function () {
-      await catheonToken.connect(owner).setService(eve.address, true);
+      await catheonToken.connect(owner).setFeeApplyingAddr(eve.address, true);
       await expect(
-        catheonToken.connect(owner).setService(eve.address, true)
+        catheonToken.connect(owner).setFeeApplyingAddr(eve.address, true)
       ).revertedWith("Already Set");
     });
   });
@@ -168,27 +186,7 @@ describe("Catheon Token Unit Tests", function () {
         .withArgs(ZERO_ADDRESS, bob.address, parseWithDecimals(10, 9));
     });
 
-    it("6.2 Only the owner can disable minting", async function () {
-      await expect(catheonToken.connect(alice).setPaused(true)).revertedWith(
-        "Ownable: caller is not the owner"
-      );
-
-      await expect(catheonToken.connect(owner).setPaused(true))
-        .to.emit(catheonToken, "SetPaused")
-        .withArgs(true);
-
-      expect(await catheonToken.isPaused()).to.eq(true);
-
-      await expect(
-        catheonToken.connect(owner).mint(bob.address, 1)
-      ).to.revertedWith("Mint Unavailable");
-
-      await expect(catheonToken.connect(owner).setPaused(true)).to.revertedWith(
-        "Same Status"
-      );
-    });
-
-    it("6.3 Only the owner can set max supply", async function () {
+    it("6.2 Only the owner can set max supply", async function () {
       const newMaxSupply = parseWithDecimals(20_000_000_000, 9);
 
       await expect(
@@ -200,7 +198,7 @@ describe("Catheon Token Unit Tests", function () {
         .withArgs(newMaxSupply);
     });
 
-    it("6.4 The owner can not set max_supply with the smaller value than current total_supply ", async function () {
+    it("6.3 The owner can not set max_supply with the smaller value than current total_supply ", async function () {
       await expect(
         catheonToken
           .connect(owner)
@@ -208,7 +206,7 @@ describe("Catheon Token Unit Tests", function () {
       ).to.revertedWith("Invalid Max Supply");
     });
 
-    it("6.5 The owner can not mint token over max supply", async function () {
+    it("6.4 The owner can not mint token over max supply", async function () {
       // can not mint over 10 billion
       await expect(
         catheonToken
@@ -224,31 +222,41 @@ describe("Catheon Token Unit Tests", function () {
       await catheonToken.connect(owner).mint(bob.address, 10000);
     });
 
-    it("7.1 if token is transferring from/to serviceAddress, The fee is not be applied", async function () {
-      await catheonToken.connect(owner).setService(bob.address, true);
+    it("7.1 if token is transferring from/to fee-applying-address, The fee will be applied", async function () {
+      await catheonToken.connect(owner).setFeeApplyingAddr(bob.address, true);
 
-      await expect(catheonToken.connect(alice).transfer(bob.address, 1000))
-        .to.emit(catheonToken, "Transfer")
-        .withArgs(alice.address, bob.address, 1000);
-
-      await expect(catheonToken.connect(bob).transfer(alice.address, 1000))
-        .to.emit(catheonToken, "Transfer")
-        .withArgs(bob.address, alice.address, 1000);
-    });
-
-    it("7.2 if token-transfer is not related with services, The fee should be applied", async function () {
-      // transferred amount excluding fee(5%) to recipient
       await expect(catheonToken.connect(alice).transfer(bob.address, 1000))
         .to.emit(catheonToken, "Transfer")
         .withArgs(alice.address, bob.address, 1000 - 50);
 
-      // transferred fee (1.5%) to service address
+      // transferred fee (default: 5%) to service address
       expect(await catheonToken.balanceOf(treasury.address)).to.eq(50);
+
+      await expect(catheonToken.connect(bob).transfer(alice.address, 1000))
+        .to.emit(catheonToken, "Transfer")
+        .withArgs(bob.address, alice.address, 1000 - 50);
+
+      // transferred fee (default: 5%) to service address
+      expect(await catheonToken.balanceOf(treasury.address)).to.eq(100);
+    });
+
+    it("7.2 if token-transfer is not related with fee-applying-address, The fee will not be applied", async function () {
+      await expect(catheonToken.connect(alice).transfer(bob.address, 1000))
+        .to.emit(catheonToken, "Transfer")
+        .withArgs(alice.address, bob.address, 1000);
+    });
+
+    it("7.2 Can not transfer too small amount less then 1000 (fee avoidance) by fee-applying address", async function () {
+      await catheonToken.connect(owner).setFeeApplyingAddr(bob.address, true);
+
+      await expect(
+        catheonToken.connect(alice).transfer(bob.address, 999)
+      ).to.revertedWith("Too small transfer");
     });
   });
 
-  describe("6. Burn Token", async function () {
-    it("6.1 Only the owner can burn token", async function () {
+  describe("8. Burn Token", async function () {
+    it("8.1 Only the owner can burn token", async function () {
       const burnAmount = parseWithDecimals(1000, 9);
       await expect(catheonToken.connect(alice).burn(burnAmount)).revertedWith(
         "Ownable: caller is not the owner"
@@ -267,6 +275,38 @@ describe("Catheon Token Unit Tests", function () {
       expect(await catheonToken.totalSupply()).to.eq(
         totalSupply.sub(burnAmount)
       );
+    });
+  });
+
+  describe("9. Upgradeable Implement", async function () {
+    it("9.1 After deploying proxy contract, can not initialize directly", async function () {
+      await expect(
+        catheonToken.initialize(
+          TOKEN_NAME,
+          TOKEN_SYMBOL,
+          parseWithDecimals(INITIAL_SUPPLY, 9),
+          treasury.address
+        )
+      ).to.revertedWith("Initializable: contract is already initialized");
+    });
+
+    it("9.2 After deploying as implement,nobody can initialize directly", async function () {
+      const CatheonTokenFactory = await ethers.getContractFactory(
+        "CatheonToken",
+        owner
+      );
+      const newCatheonToken = await CatheonTokenFactory.deploy();
+      await newCatheonToken.deployed();
+      await expect(
+        newCatheonToken
+          .connect(alice)
+          .initialize(
+            TOKEN_NAME,
+            TOKEN_SYMBOL,
+            parseWithDecimals(INITIAL_SUPPLY, 9),
+            treasury.address
+          )
+      ).to.revertedWith("Initializable: contract is already initialized");
     });
   });
 });
