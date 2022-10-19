@@ -88,3 +88,9 @@ $ yarn test
   ```shell
   $ yarn deploy --network polygon
   ```
+
+- Verify Token on Polygon scan
+
+  ```shell
+  $ yarn verify <IMPLEMENT_ADDRESS> --network polygon
+  ```

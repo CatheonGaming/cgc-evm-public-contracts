@@ -41,7 +41,7 @@ const config: HardhatUserConfig = {
       accounts: [process.env.ADMIN_KEY || ""],
     },
     mumbai: {
-      url: "https://rpc-mumbai.maticvigil.com",
+      url: "https://polygon-mumbai.g.alchemy.com/v2/8e1xuCkrZ6747AEGFNuXaRt_uCxoz7Mz",
       accounts: [process.env.ADMIN_KEY || ""],
       chainId: 80001,
     },
@@ -65,7 +65,10 @@ const config: HardhatUserConfig = {
     cache: "./build/cache",
   },
   etherscan: {
-    apiKey: process.env.SCAN_API_KEY,
+    apiKey: {
+      polygon: process.env.SCAN_API_KEY,
+      polygonMumbai: process.env.SCAN_API_KEY,
+    },
   },
 };
 
