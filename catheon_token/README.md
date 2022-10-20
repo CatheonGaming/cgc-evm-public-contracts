@@ -10,7 +10,7 @@ Ownable, Upgradeable ERC20 contract.
 - Token decimals (9)
 - While deploying, Deployer will own the tokens equals of Initial balance
 - Fee
-  - The fee will be applied upon token-transfer transactions between the addresses including the fee-applying-addresses ( 90% >= fee percentage > 0%, default: 5%).
+  - The fee will be applied upon token-transfer transactions between the addresses including the fee-applying-addresses ( 10% >= fee percentage > 0%, default: 5%).
   - The transfers from/to the treasury address will be not applied fee.
   - If any address was registered as a fee-applying-address by owner, While the transactions related with this address being executed, the transaction fee will be applied.
   - The fee should be transferred to treasury address.
@@ -77,10 +77,10 @@ $ yarn test
   Set token's name and symbol, initial_supply, treasury in `scripts/params.ts` file
 
   ```shell
-  export const TOKEN_NAME = "CATHEON TOKEN";
+  export const TOKEN_NAME = "CATHEON";
   export const TOKEN_SYMBOL = "CATHEON";
-  export const INITIAL_SUPPLY = 1000_000_000;
-  export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";
+  export const INITIAL_SUPPLY = 10_000_000_000;
+  export const TREASURY = "0x1b32Ffce8928cb8d4612212417156308Ef4a7a1A";
   ```
 
 - Deploy Token Contract on Polygon
