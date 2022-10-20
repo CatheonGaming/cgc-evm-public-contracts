@@ -3,6 +3,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "./scripts/deploy";
+import "./scripts/commands";
 
 dotenv.config();
 

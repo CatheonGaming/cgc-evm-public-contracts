@@ -94,3 +94,9 @@ $ yarn test
   ```shell
   $ yarn verify <IMPLEMENT_ADDRESS> --network polygon
   ```
+
+- Mint token on Polygon
+
+  ```shell
+  $ yarn hardhat mint:Catheon --address <CATHON_TOKEN_ADDRESS> --to <MINT_TARGET_ADDRESS> --amount <MINT_AMOUNT_WITHOUT_DECIMALS> --network polygon
+  ```
