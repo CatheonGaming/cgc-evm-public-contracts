@@ -21,8 +21,8 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     uint256 private constant PERCENTAGE_DIVISION = 1000;
     // 0%
     uint256 private constant PERCENTAGE_ZERO = 0;
-    // max fee percentage (90%)
-    uint256 private constant MAX_FEE_PERCENTAGE = 900;
+    // max fee percentage (10%)
+    uint256 private constant MAX_FEE_PERCENTAGE = 100;
 
     /// @dev Emitted when owner change treasury address
     event SetTreasury(address indexed treasury);

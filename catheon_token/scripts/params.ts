@@ -1,4 +1,4 @@
-export const TOKEN_NAME = "CATHEON TOKEN";
+export const TOKEN_NAME = "CATHEON";
 export const TOKEN_SYMBOL = "CATHEON";
-export const INITIAL_SUPPLY = 1000_000_000;
-export const TREASURY = "0x76e7BC85008156cFc477d5cc0a6c69616BaD269e";
+export const INITIAL_SUPPLY = 10_000_000_000; // 10 billion
+export const TREASURY = "0x1b32Ffce8928cb8d4612212417156308Ef4a7a1A";
