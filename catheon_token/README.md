@@ -92,7 +92,7 @@ $ yarn test
 - Verify Token on Polygon scan
 
   ```shell
-  $ yarn verify <IMPLEMENT_ADDRESS> --network polygon
+  $ yarn hardhat verify <IMPLEMENT_ADDRESS> --network polygon
   ```
 
 - Mint token on Polygon
