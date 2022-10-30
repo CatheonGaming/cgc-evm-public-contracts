@@ -77,10 +77,10 @@ $ yarn test
   Set token's name and symbol, initial_supply, treasury in `scripts/params.ts` file
 
   ```shell
-  export const TOKEN_NAME = "CATHEON";
+  export const TOKEN_NAME = "Catheon Gaming";
   export const TOKEN_SYMBOL = "CATHEON";
   export const INITIAL_SUPPLY = 10_000_000_000;
-  export const TREASURY = "0x1b32Ffce8928cb8d4612212417156308Ef4a7a1A";
+  export const TREASURY = "0xB8f23D70bF764D3D217E9A76632B79db5E6C080e";
   ```
 
 - Deploy Token Contract on Polygon
@@ -92,7 +92,7 @@ $ yarn test
 - Verify Token on Polygon scan
 
   ```shell
-  $ yarn hardhat verify <IMPLEMENT_ADDRESS> --network polygon
+  $ yarn hardhat verify:Catheon --address <CATHON_TOKEN_ADDRESS> --network polygon
   ```
 
 - Mint token on Polygon
