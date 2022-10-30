@@ -26,3 +26,21 @@ task("deploy:Catheon", "Deploy Catheon Token").setAction(async function (
 
   console.log("Catheon Token deployed to:", catheonToken.address);
 });
+
+task("verify:Catheon", "Deploy Catheon Token")
+  .addParam("address", "The deployed Catheon token address")
+  .setAction(async function (taskArguments: TaskArguments, hre) {
+
+    // Verify Contract
+    await hre.run("verify:verify", {
+      address: taskArguments.address,
+      constructorArguments: [
+        TOKEN_NAME,
+        TOKEN_SYMBOL,
+        hre.ethers.utils.parseUnits(INITIAL_SUPPLY.toString(), 9),
+        TREASURY,
+      ],
+    });
+
+    console.log("Catheon token was verified successfully !!!");
+  });
