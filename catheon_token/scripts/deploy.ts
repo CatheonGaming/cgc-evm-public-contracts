@@ -16,12 +16,12 @@ task("deploy:Catheon", "Deploy Catheon Token").setAction(async function (
   );
 
   // Deploy Contract
-  const catheonToken = await hre.upgrades.deployProxy(CatheonTokenFactory, [
+  const catheonToken = await CatheonTokenFactory.deploy(
     TOKEN_NAME,
     TOKEN_SYMBOL,
     hre.ethers.utils.parseUnits(INITIAL_SUPPLY.toString(), 9),
-    TREASURY,
-  ]);
+    TREASURY
+  );
   await catheonToken.deployed();
 
   console.log("Catheon Token deployed to:", catheonToken.address);

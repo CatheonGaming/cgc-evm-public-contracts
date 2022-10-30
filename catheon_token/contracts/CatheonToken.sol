@@ -2,13 +2,13 @@
 
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// Catheon token
 /// @dev The ownable, upgradeable ERC20 contract
 /// @notice Do not override Ownable functions to checking ownership (Ownership can not be renounced)
-contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
+contract CatheonToken is ERC20, Ownable {
     // addresses applying fee (address => isApplyingFee)
     mapping(address => bool) public feeApplies;
     // max total supply limit 10_000_000_000 * DECIMAL
@@ -33,23 +33,17 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
     /// @dev Emitted when owner set max-supply
     event SetMaxSupply(uint256 indexed supply);
 
-    /// @dev Prevent initialization of the implementation contract itself and prevent an attacker from initializing it
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    /// @dev Initialize for upgradeable
+    /// @dev Constructor
     /// @param name_ Token name
     /// @param symbol_ Token symbol
     /// @param initialBalance_ Initial token balance of deployer
     /// @param treasury_ Treasury address receiving fee
-    function initialize(
+    constructor(
         string memory name_,
         string memory symbol_,
         uint256 initialBalance_,
         address treasury_
-    ) public initializer {
+    ) ERC20(name_, symbol_) {
         require(bytes(name_).length > 0, "Empty Name");
         require(bytes(symbol_).length > 2, "Invalid symbol: min 3 letters");
         require(
@@ -66,11 +60,6 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         _feePercent = 50;
 
         _mint(msg.sender, initialBalance_);
-
-        /// initialize ERC20
-        __ERC20_init(name_, symbol_);
-        /// initialize Ownable
-        __Ownable_init();
     }
 
     /// @dev Mint token by owner at any time
@@ -110,10 +99,10 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
             receiveAmount = amount - feeAmount;
 
             // feeAmount can not be zero in here
-            ERC20Upgradeable._transfer(sender, treasuryAddress, feeAmount);
+            ERC20._transfer(sender, treasuryAddress, feeAmount);
         }
 
-        ERC20Upgradeable._transfer(sender, recipient, receiveAmount);
+        ERC20._transfer(sender, recipient, receiveAmount);
     }
 
     /// @dev Set new treasury address by owner
@@ -177,7 +166,7 @@ contract CatheonToken is ERC20Upgradeable, OwnableUpgradeable {
         require(_totalSupply + amount <= maxSupply, "Limited By Max Supply");
 
         // call ERC20 _mint function
-        ERC20Upgradeable._mint(account, amount);
+        ERC20._mint(account, amount);
     }
 
     /// @dev Set new max supply by owner

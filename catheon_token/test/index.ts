@@ -25,12 +25,12 @@ describe("Catheon Token Unit Tests", function () {
       "CatheonToken",
       owner
     );
-    catheonToken = await upgrades.deployProxy(CatheonTokenFactory, [
+    catheonToken = await CatheonTokenFactory.deploy(
       TOKEN_NAME,
       TOKEN_SYMBOL,
       parseWithDecimals(INITIAL_SUPPLY, 9),
-      treasury.address,
-    ]);
+      treasury.address
+    );
     await catheonToken.deployed();
   });
 
@@ -40,36 +40,31 @@ describe("Catheon Token Unit Tests", function () {
       owner
     );
     await expect(
-      upgrades.deployProxy(CatheonTokenFactory, [
+      CatheonTokenFactory.deploy(
         "",
         TOKEN_SYMBOL,
         parseWithDecimals(INITIAL_SUPPLY, 9),
-        treasury.address,
-      ])
+        treasury.address
+      )
     ).revertedWith("Empty Name");
     await expect(
-      upgrades.deployProxy(CatheonTokenFactory, [
+      CatheonTokenFactory.deploy(
         TOKEN_NAME,
         "",
         parseWithDecimals(INITIAL_SUPPLY, 9),
-        treasury.address,
-      ])
+        treasury.address
+      )
     ).revertedWith("Invalid symbol: min 3 letters");
     await expect(
-      upgrades.deployProxy(CatheonTokenFactory, [
-        TOKEN_NAME,
-        TOKEN_SYMBOL,
-        0,
-        treasury.address,
-      ])
+      CatheonTokenFactory.deploy(TOKEN_NAME, TOKEN_SYMBOL, 0, treasury.address)
     ).revertedWith("Invalid initial balance");
     await expect(
-      upgrades.deployProxy(CatheonTokenFactory, [
+      CatheonTokenFactory.deploy(
         TOKEN_NAME,
         TOKEN_SYMBOL,
         parseWithDecimals(INITIAL_SUPPLY, 9),
-        ethers.constants.AddressZero,
-      ])
+        ethers.constants.AddressZero
+      )
     ).revertedWith("Zero Treasury Address");
   });
 
@@ -94,6 +89,9 @@ describe("Catheon Token Unit Tests", function () {
 
     // service
     expect(await catheonToken.treasury()).to.eq(treasury.address);
+
+    // owner
+    expect(await catheonToken.owner()).to.eq(owner.address);
   });
 
   describe("3. Fee percentage", async function () {
@@ -275,38 +273,6 @@ describe("Catheon Token Unit Tests", function () {
       expect(await catheonToken.totalSupply()).to.eq(
         totalSupply.sub(burnAmount)
       );
-    });
-  });
-
-  describe("9. Upgradeable Implement", async function () {
-    it("9.1 After deploying proxy contract, can not initialize directly", async function () {
-      await expect(
-        catheonToken.initialize(
-          TOKEN_NAME,
-          TOKEN_SYMBOL,
-          parseWithDecimals(INITIAL_SUPPLY, 9),
-          treasury.address
-        )
-      ).to.revertedWith("Initializable: contract is already initialized");
-    });
-
-    it("9.2 After deploying as implement,nobody can initialize directly", async function () {
-      const CatheonTokenFactory = await ethers.getContractFactory(
-        "CatheonToken",
-        owner
-      );
-      const newCatheonToken = await CatheonTokenFactory.deploy();
-      await newCatheonToken.deployed();
-      await expect(
-        newCatheonToken
-          .connect(alice)
-          .initialize(
-            TOKEN_NAME,
-            TOKEN_SYMBOL,
-            parseWithDecimals(INITIAL_SUPPLY, 9),
-            treasury.address
-          )
-      ).to.revertedWith("Initializable: contract is already initialized");
     });
   });
 });
