@@ -68,13 +68,13 @@ export const collections = [
     price: 5,
     uri_prefix: "https://ipfs.io/ipfs/QmXCUS3AZXmbKT5fH9eCjKoGLyyKAg4yCSdauzjPmUWQtG/",
   },
-  // {
-  //   name: "Star's End Metaverse Lootbox",
-  //   symbol: "STARSEND",
-  //   supply: 200,
-  //   price: 0.01,
-  //   uri_prefix: "https://ipfs.io/ipfs/QmRG47iBSfJ6Z9zYyPGCUiWhJrytdbQydVtoHSzHKTc3sj/",
-  // },
+  {
+    name: "Star's End Metaverse Lootbox",
+    symbol: "STARSEND",
+    supply: 200,
+    price: 5,
+    uri_prefix: "https://ipfs.io/ipfs/Qme3x4AqVu4GZBN3GsodxZXSH2d7MyVJXpJgKtCG6naYYf/",
+  },
   {
     name: "Stars End Game Beta Pass",
     symbol: "STARSEND",
